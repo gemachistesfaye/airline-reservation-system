@@ -100,6 +100,14 @@ if (strpos($route, "/cancel-booking/") === 0 && $method === "DELETE") {
     exit;
 }
 
+if (strpos($route, "/process-payment/") === 0 && $method === "POST") {
+    require_once "controllers/PaymentController.php";
+    $parts = explode("/", $route);
+    $booking_id = end($parts);
+    (new PaymentController($conn))->processPayment($booking_id);
+    exit;
+}
+
 if ($route === "/my-bookings" && $method === "GET") {
     (new BookingController($conn))->getBookings();
     exit;

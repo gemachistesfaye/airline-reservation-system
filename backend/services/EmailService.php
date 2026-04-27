@@ -79,4 +79,42 @@ class EmailService {
             return false;
         }
     }
+
+    public function sendPaymentEmail($email, $name, $booking) {
+        try {
+            $this->mail->clearAddresses();
+            $this->mail->addAddress($email, $name);
+            $this->mail->isHTML(true);
+            $this->mail->Subject = 'Confirm Your AeroSpace Booking: ' . $booking['ticket_number'];
+            
+            $paymentLink = BASE_URL_FRONTEND . "/payment/" . $booking['booking_id'];
+            
+            $this->mail->Body = "
+                <div style='font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;'>
+                    <h2 style='color: #4f46e5; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px;'>Booking Confirmation</h2>
+                    <p>Hello <strong>$name</strong>, your flight booking is almost complete!</p>
+                    
+                    <div style='background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                        <p style='margin: 5px 0;'><strong>Flight:</strong> " . $booking['flight_number'] . "</p>
+                        <p style='margin: 5px 0;'><strong>Route:</strong> " . $booking['origin'] . " to " . $booking['destination'] . "</p>
+                        <p style='margin: 5px 0;'><strong>Class:</strong> " . $booking['seat_class'] . "</p>
+                        <p style='margin: 5px 0;'><strong>Seat:</strong> " . $booking['seat_number'] . "</p>
+                        <p style='margin: 5px 0;'><strong>Ticket:</strong> " . $booking['ticket_number'] . "</p>
+                    </div>
+
+                    <p>To finalize your reservation, please complete the payment using the button below:</p>
+                    
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='$paymentLink' style='background: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;'>Complete Secure Payment</a>
+                    </div>
+
+                    <p style='font-size: 12px; color: #6b7280;'>If you did not make this booking, please ignore this email.</p>
+                </div>
+            ";
+
+            return $this->mail->send();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
 }

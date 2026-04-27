@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . "/../middleware/AuthMiddleware.php";
+require_once __DIR__ . "/../services/EmailService.php";
 
 class BookingController {
 
@@ -12,152 +13,96 @@ class BookingController {
         $this->auth = new AuthMiddleware();
     }
 
-    // =====================
-    // BOOK FLIGHT (SECURE + SAFE)
-    // =====================
     public function bookFlight() {
-
-        $user = $this->auth->requireUser(); // STRICT RBAC: Only 'user' role allowed
-        
+        $user = $this->auth->requireUser(); 
         $data = json_decode(file_get_contents("php://input"));
 
-        if (!$data || empty($data->flight_id) || empty($data->seat_number)) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "flight_id and seat_number required"
-            ]);
+        if (!$data || empty($data->flight_id) || empty($data->seat_number) || empty($data->seat_class)) {
+            echo json_encode(["status" => "error", "message" => "Flight, Seat, and Class are required"]);
             return;
         }
 
-        // =====================
-        // CHECK FLIGHT EXISTS
-        // =====================
-        $stmt = $this->conn->prepare("
-            SELECT available_seats 
-            FROM flights 
-            WHERE flight_id = ?
-        ");
-        $stmt->execute([$data->flight_id]);
+        $classMap = [
+            'Economy' => 'economy_seats_avail',
+            'Business' => 'business_seats_avail',
+            'First Class' => 'first_class_seats_avail'
+        ];
 
-        $flight = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$flight) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Flight not found"
-            ]);
+        if (!array_key_exists($data->seat_class, $classMap)) {
+            echo json_encode(["status" => "error", "message" => "Invalid seat class selected"]);
             return;
         }
 
-        if ($flight['available_seats'] <= 0) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "No seats available"
-            ]);
-            return;
-        }
+        $availCol = $classMap[$data->seat_class];
 
-        // =====================
-        // CHECK IF SEAT ALREADY BOOKED
-        // =====================
-        $checkSeat = $this->conn->prepare("
-            SELECT booking_id 
-            FROM bookings 
-            WHERE flight_id = ? AND seat_number = ?
-        ");
-        $checkSeat->execute([
-            $data->flight_id,
-            $data->seat_number
-        ]);
-
-        if ($checkSeat->rowCount() > 0) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Seat already booked"
-            ]);
-            return;
-        }
-
-        // =====================
-        // CHECK SEAT STATUS TABLE (IMPORTANT FIX)
-        // =====================
-        $seatCheck = $this->conn->prepare("
-            SELECT availability_status 
-            FROM seats 
-            WHERE flight_id = ? AND seat_number = ?
-        ");
-        $seatCheck->execute([
-            $data->flight_id,
-            $data->seat_number
-        ]);
-
-        $seat = $seatCheck->fetch(PDO::FETCH_ASSOC);
-
-        if ($seat && $seat['availability_status'] === 'booked') {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Seat already booked (seat table)"
-            ]);
-            return;
-        }
-
-        // =====================
-        // START TRANSACTION (WITH CONCURRENCY PROTECTION)
-        // =====================
         $this->conn->beginTransaction();
 
         try {
-            // 0. PREVENT MULTIPLE BOOKINGS BY SAME USER ON SAME FLIGHT
-            $dup = $this->conn->prepare("SELECT booking_id FROM bookings WHERE user_id = ? AND flight_id = ? AND status = 'Confirmed'");
-            $dup->execute([$user->id, $data->flight_id]);
-            if ($dup->rowCount() > 0) {
-                $this->conn->rollBack();
-                echo json_encode(["status" => "error", "message" => "You already have a confirmed booking for this flight."]);
-                return;
-            }
-
-            // 1. LOCK FLIGHT RECORD
-            $stmt = $this->conn->prepare("SELECT available_seats FROM flights WHERE flight_id = ? FOR UPDATE");
+            // 1. LOCK FLIGHT RECORD (CLASS SPECIFIC)
+            $stmt = $this->conn->prepare("SELECT $availCol, flight_number, origin, destination FROM flights WHERE flight_id = ? FOR UPDATE");
             $stmt->execute([$data->flight_id]);
             $flight = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$flight || $flight['available_seats'] <= 0) {
+            if (!$flight || $flight[$availCol] <= 0) {
                 $this->conn->rollBack();
-                echo json_encode(["status" => "error", "message" => "Flight full or not found"]);
+                echo json_encode(["status" => "error", "message" => "No seats available in " . $data->seat_class]);
                 return;
             }
 
-            // LOCK SEAT RECORD
-            $seatCheck = $this->conn->prepare("SELECT availability_status FROM seats WHERE flight_id = ? AND seat_number = ? FOR UPDATE");
+            // 2. LOCK SEAT RECORD & VERIFY CLASS MATCH
+            $seatCheck = $this->conn->prepare("SELECT availability_status, class FROM seats WHERE flight_id = ? AND seat_number = ? FOR UPDATE");
             $seatCheck->execute([$data->flight_id, $data->seat_number]);
             $seat = $seatCheck->fetch(PDO::FETCH_ASSOC);
 
             if (!$seat || $seat['availability_status'] === 'booked') {
                 $this->conn->rollBack();
-                echo json_encode(["status" => "error", "message" => "Seat no longer available"]);
+                echo json_encode(["status" => "error", "message" => "Seat already taken"]);
                 return;
             }
 
-            // GENERATE TICKET NUMBER
-            $ticket_number = 'TKT-' . strtoupper(substr(uniqid(), -6)) . rand(100, 999);
+            if ($seat['class'] !== $data->seat_class) {
+                $this->conn->rollBack();
+                echo json_encode(["status" => "error", "message" => "Seat " . $data->seat_number . " is not " . $data->seat_class . " (it is " . $seat['class'] . ")"]);
+                return;
+            }
 
-            // INSERT BOOKING
+            // 3. GENERATE TICKET & INSERT BOOKING (PENDING PAYMENT)
+            $ticket_number = 'AERO-' . strtoupper(substr(uniqid(), -4)) . rand(10, 99);
+            
             $insert = $this->conn->prepare("
-                INSERT INTO bookings (user_id, flight_id, seat_number, status, ticket_number)
-                VALUES (?, ?, ?, 'Confirmed', ?)
+                INSERT INTO bookings (user_id, flight_id, seat_number, seat_class, status, payment_status, ticket_number)
+                VALUES (?, ?, ?, ?, 'Pending Payment', 'pending', ?)
             ");
-            $insert->execute([$user->id, $data->flight_id, $data->seat_number, $ticket_number]);
+            $insert->execute([$user->id, $data->flight_id, $data->seat_number, $data->seat_class, $ticket_number]);
+            $booking_id = $this->conn->lastInsertId();
 
-            // UPDATE FLIGHT SEATS
-            $updateFlight = $this->conn->prepare("UPDATE flights SET available_seats = available_seats - 1 WHERE flight_id = ?");
+            // 4. UPDATE CLASS SPECIFIC AVAILABILITY
+            $updateFlight = $this->conn->prepare("UPDATE flights SET $availCol = $availCol - 1, available_seats = available_seats - 1 WHERE flight_id = ?");
             $updateFlight->execute([$data->flight_id]);
 
-            // UPDATE SEAT STATUS
+            // 5. UPDATE SEAT STATUS
             $updateSeat = $this->conn->prepare("UPDATE seats SET availability_status = 'booked' WHERE flight_id = ? AND seat_number = ?");
             $updateSeat->execute([$data->flight_id, $data->seat_number]);
 
             $this->conn->commit();
-            echo json_encode(["status" => "success", "message" => "Booking successful", "ticket" => $ticket_number]);
+
+            // 6. SEND PAYMENT EMAIL
+            $emailService = new EmailService();
+            $emailService->sendPaymentEmail($user->email, $user->first_name, [
+                'booking_id' => $booking_id,
+                'flight_number' => $flight['flight_number'],
+                'origin' => $flight['origin'],
+                'destination' => $flight['destination'],
+                'seat_class' => $data->seat_class,
+                'seat_number' => $data->seat_number,
+                'ticket_number' => $ticket_number
+            ]);
+
+            echo json_encode([
+                "status" => "success", 
+                "message" => "Booking created! Please check your email for the payment link.",
+                "booking_id" => $booking_id
+            ]);
 
         } catch (Exception $e) {
             $this->conn->rollBack();
@@ -165,92 +110,60 @@ class BookingController {
         }
     }
 
-    // =====================
-    // GET USER BOOKINGS
-    // =====================
     public function getBookings() {
-
         $user = $this->auth->verify();
-
         $stmt = $this->conn->prepare("
             SELECT 
-                b.booking_id,
-                f.flight_number,
-                f.origin,
-                f.destination,
-                f.departure_time,
-                f.status as flight_status,
-                b.seat_number,
-                b.booking_date,
-                b.status,
-                b.ticket_number
+                b.booking_id, f.flight_number, f.origin, f.destination, f.departure_time,
+                b.seat_number, b.seat_class, b.booking_date, b.status, b.payment_status, b.ticket_number
             FROM bookings b
             JOIN flights f ON b.flight_id = f.flight_id
             WHERE b.user_id = ?
             ORDER BY b.booking_date DESC
         ");
-
         $stmt->execute([$user->id]);
-
-        echo json_encode([
-            "status" => "success",
-            "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)
-        ]);
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
     }
 
-    // =====================
-    // CANCEL BOOKING
-    // =====================
     public function cancelBooking($id = null) {
-
         $user = $this->auth->verify();
-        $booking_id = $id;
-
-        if (!$booking_id) {
-            $data = json_decode(file_get_contents("php://input"));
-            $booking_id = $data->booking_id ?? null;
-        }
+        $booking_id = $id ?? json_decode(file_get_contents("php://input"))->booking_id ?? null;
 
         if (!$booking_id) {
             echo json_encode(["status" => "error", "message" => "booking_id required"]);
             return;
         }
 
-        // Verify this booking belongs to the user and is confirmed
         $check = $this->conn->prepare("
-            SELECT flight_id, seat_number FROM bookings
-            WHERE booking_id = ? AND user_id = ? AND status = 'Confirmed'
+            SELECT flight_id, seat_number, seat_class FROM bookings
+            WHERE booking_id = ? AND user_id = ? AND status != 'Cancelled'
         ");
         $check->execute([$booking_id, $user->id]);
         $booking = $check->fetch(PDO::FETCH_ASSOC);
 
         if (!$booking) {
-            echo json_encode(["status" => "error", "message" => "Booking not found or cannot be cancelled"]);
+            echo json_encode(["status" => "error", "message" => "Booking not found"]);
             return;
         }
 
+        $classMap = [
+            'Economy' => 'economy_seats_avail',
+            'Business' => 'business_seats_avail',
+            'First Class' => 'first_class_seats_avail'
+        ];
+        $availCol = $classMap[$booking['seat_class']];
+
         $this->conn->beginTransaction();
         try {
-            // Mark booking as cancelled
-            $upd = $this->conn->prepare("UPDATE bookings SET status = 'Cancelled' WHERE booking_id = ?");
-            $upd->execute([$booking_id]);
-
-            // Restore flight seat count
-            $upd2 = $this->conn->prepare("UPDATE flights SET available_seats = available_seats + 1 WHERE flight_id = ?");
-            $upd2->execute([$booking['flight_id']]);
-
-            // Restore seat availability
-            $upd3 = $this->conn->prepare("
-                UPDATE seats SET availability_status = 'available'
-                WHERE flight_id = ? AND seat_number = ?
-            ");
-            $upd3->execute([$booking['flight_id'], $booking['seat_number']]);
+            $this->conn->prepare("UPDATE bookings SET status = 'Cancelled' WHERE booking_id = ?")->execute([$booking_id]);
+            $this->conn->prepare("UPDATE flights SET $availCol = $availCol + 1, available_seats = available_seats + 1 WHERE flight_id = ?")->execute([$booking['flight_id']]);
+            $this->conn->prepare("UPDATE seats SET availability_status = 'available' WHERE flight_id = ? AND seat_number = ?")->execute([$booking['flight_id'], $booking['seat_number']]);
 
             $this->conn->commit();
-            echo json_encode(["status" => "success", "message" => "Booking cancelled successfully"]);
+            echo json_encode(["status" => "success", "message" => "Booking cancelled"]);
         } catch (Exception $e) {
             $this->conn->rollBack();
-            echo json_encode(["status" => "error", "message" => "Cancellation failed: " . $e->getMessage()]);
+            echo json_encode(["status" => "error", "message" => "Cancellation failed"]);
         }
     }
-}
+}

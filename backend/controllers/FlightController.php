@@ -8,9 +8,6 @@ class FlightController {
         $this->conn = $conn;
     }
 
-    // =========================
-    // GET ALL FLIGHTS (WITH SEARCH & PAGINATION)
-    // =========================
     public function getAllFlights() {
         require_once __DIR__ . "/../services/SearchService.php";
         $search = new SearchService($this->conn);
@@ -33,9 +30,6 @@ class FlightController {
         ]);
     }
 
-    // =========================
-    // GET SINGLE FLIGHT
-    // =========================
     public function getFlight($id = null) {
         $flight_id = $id ?? $_GET['flight_id'] ?? null;
 
@@ -56,14 +50,16 @@ class FlightController {
         echo json_encode(["status" => "success", "data" => $flight]);
     }
 
-    // =========================
-    // CREATE FLIGHT + SEATS
-    // =========================
     public function createFlight() {
-
         $data = json_decode(file_get_contents("php://input"));
 
-        if (empty($data->flight_number) || empty($data->origin) || empty($data->destination) || empty($data->total_seats)) {
+        // New requirement: Class-specific seat counts
+        $eco = (int)($data->economy_seats ?? 40);
+        $bus = (int)($data->business_seats ?? 12);
+        $fst = (int)($data->first_class_seats ?? 6);
+        $total = $eco + $bus + $fst;
+
+        if (empty($data->flight_number) || empty($data->origin) || empty($data->destination)) {
             echo json_encode(["status" => "error", "message" => "Missing required fields"]);
             return;
         }
@@ -72,8 +68,15 @@ class FlightController {
             $this->conn->beginTransaction();
 
             $stmt = $this->conn->prepare("
-                INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_seats, available_seats, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO flights (
+                    flight_number, origin, destination, departure_time, arrival_time, 
+                    total_seats, available_seats, 
+                    economy_seats_total, economy_seats_avail, 
+                    business_seats_total, business_seats_avail, 
+                    first_class_seats_total, first_class_seats_avail, 
+                    status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $stmt->execute([
@@ -82,19 +85,22 @@ class FlightController {
                 $data->destination,
                 $data->departure_time ?? null,
                 $data->arrival_time ?? null,
-                $data->total_seats,
-                $data->total_seats,
+                $total,
+                $total,
+                $eco, $eco,
+                $bus, $bus,
+                $fst, $fst,
                 $data->status ?? 'Scheduled'
             ]);
 
             $flight_id = $this->conn->lastInsertId();
-            $this->generateSeats($flight_id, $data->total_seats);
+            $this->generateTieredSeats($flight_id, $eco, $bus, $fst);
 
             $this->conn->commit();
 
             echo json_encode([
                 "status" => "success",
-                "message" => "Flight " . $data->flight_number . " created successfully with " . $data->total_seats . " seats."
+                "message" => "Flight " . $data->flight_number . " established with $fst First, $bus Business, and $eco Economy seats."
             ]);
         } catch (Exception $e) {
             $this->conn->rollBack();
@@ -102,9 +108,6 @@ class FlightController {
         }
     }
 
-    // =========================
-    // UPDATE FLIGHT
-    // =========================
     public function updateFlight($id = null) {
         $data = json_decode(file_get_contents("php://input"));
         $flight_id = $id ?? $data->flight_id ?? null;
@@ -137,29 +140,43 @@ class FlightController {
         }
     }
 
-    // =========================
-    // SEAT GENERATION SYSTEM
-    // =========================
-    public function generateSeats($flight_id, $totalSeats) {
-
-        $rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    private function generateTieredSeats($flight_id, $eco, $bus, $fst) {
+        $rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'];
         $cols = [1, 2, 3, 4, 5, 6];
 
+        $stmt = $this->conn->prepare("
+            INSERT INTO seats (flight_id, seat_number, class, availability_status)
+            VALUES (?, ?, ?, 'available')
+        ");
+
+        // 1. Generate First Class
         $count = 0;
-        foreach ($rows as $r) {
-            foreach ($cols as $c) {
-                if ($count >= $totalSeats) break 2;
+        for ($r = 0; $r < count($rows); $r++) {
+            for ($c = 1; $c <= 6; $c++) {
+                if ($count >= $fst) break 2;
+                $stmt->execute([$flight_id, $rows[$r] . $c, 'First Class']);
+                $count++;
+            }
+        }
 
-                $seatNumber = $r . $c;
-                $class = 'Economy';
-                if ($r === 'A') $class = 'First';
-                elseif ($r === 'B') $class = 'Business';
+        // 2. Generate Business Class
+        $startRow = ceil($fst / 6);
+        $count = 0;
+        for ($r = $startRow; $r < count($rows); $r++) {
+            for ($c = 1; $c <= 6; $c++) {
+                if ($count >= $bus) break 2;
+                $stmt->execute([$flight_id, $rows[$r] . $c, 'Business Class']);
+                $count++;
+            }
+        }
 
-                $stmt = $this->conn->prepare("
-                    INSERT INTO seats (flight_id, seat_number, class, availability_status)
-                    VALUES (?, ?, ?, 'available')
-                ");
-                $stmt->execute([$flight_id, $seatNumber, $class]);
+        // 3. Generate Economy Class
+        $startRow = ceil(($fst + $bus) / 6);
+        $count = 0;
+        for ($r = $startRow; $r < count($rows); $r++) {
+            for ($c = 1; $c <= 6; $c++) {
+                if ($count >= $eco) break 2;
+                $stmt->execute([$flight_id, $rows[$r] . $c, 'Economy Class']);
                 $count++;
             }
         }

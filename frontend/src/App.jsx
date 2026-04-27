@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
+import Payment from "./pages/Payment";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/Toast";
@@ -82,6 +83,14 @@ const AnimatedRoutes = () => {
           }
         />
 
+        <Route
+          path="/payment/:booking_id"
+          element={
+            <PageTransition>
+              <Payment />
+            </PageTransition>
+          }
+        />
         <Route
           path="/dashboard"
           element={
