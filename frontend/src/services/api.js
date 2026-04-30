@@ -1,4 +1,4 @@
-const BASE_URL = "http://10.232.201.174/airline-reservation-system/backend";
+const BASE_URL = "http://localhost:8080";
 
 const getToken = () => localStorage.getItem("token");
 

@@ -14,7 +14,7 @@ export default function Payment() {
   const handlePayment = async () => {
     setProcessing(true);
     try {
-      const res = await fetch(`http://localhost/airline-reservation-system/backend/process-payment/${booking_id}`, {
+      const res = await fetch(`http://localhost:8080/process-payment/${booking_id}`, {
         method: "POST"
       }).then(r => r.json());
 

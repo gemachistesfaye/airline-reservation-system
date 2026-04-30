@@ -72,4 +72,4 @@ INSERT IGNORE INTO users (name, email, password, role, is_verified) VALUES
 
 -- 6. Sample Flight for Testing
 INSERT IGNORE INTO flights (flight_number, origin, destination, departure_time, arrival_time, base_price, total_seats, available_seats)
-VALUES ('ET302', 'Addis Ababa', 'Nairobi', DATE_ADD(NOW(), INTERVAL 2 DAY), DATE_ADD(NOW(), INTERVAL 2 DAY + 2 HOUR), 250.00, 58, 58);
+VALUES ('ET302', 'Addis Ababa', 'Nairobi', DATE_ADD(NOW(), INTERVAL 2 DAY), DATE_ADD(NOW(), INTERVAL 50 HOUR), 250.00, 58, 58);
