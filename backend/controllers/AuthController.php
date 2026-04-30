@@ -24,63 +24,62 @@ class AuthController {
     public function register() {
         $data = json_decode(file_get_contents("php://input"));
 
-        if (!$data || empty($data->email) || empty($data->password) || empty($data->username)) {
-            echo json_encode(["status" => "error", "message" => "Required fields missing"]);
+        if (!$data || empty($data->email) || empty($data->password) || empty($data->name)) {
+            echo json_encode(["status" => "error", "message" => "Required fields missing (name, email, password)"]);
             return;
         }
 
         // Check if exists
-        $check = $this->conn->prepare("SELECT id FROM users WHERE email = ? OR username = ?");
-        $check->execute([$data->email, $data->username]);
+        $check = $this->conn->prepare("SELECT id FROM users WHERE email = ?");
+        $check->execute([$data->email]);
         if ($check->rowCount() > 0) {
-            echo json_encode(["status" => "error", "message" => "Email or Username already taken"]);
+            echo json_encode(["status" => "error", "message" => "Email already taken"]);
             return;
         }
 
         $password = password_hash($data->password, PASSWORD_BCRYPT);
         $token = bin2hex(random_bytes(32));
+        $user_type = $data->user_type ?? 'regular';
 
         $stmt = $this->conn->prepare("
-            INSERT INTO users (first_name, last_name, username, email, password, role, verification_token, is_verified)
-            VALUES (?, ?, ?, ?, ?, 'user', ?, 0)
+            INSERT INTO users (name, email, password, role, user_type, verification_token, is_verified)
+            VALUES (?, ?, ?, 'user', ?, ?, 0)
         ");
 
         $stmt->execute([
-            $data->first_name ?? '',
-            $data->last_name ?? '',
-            $data->username,
+            $data->name,
             $data->email,
             $password,
+            $user_type,
             $token
         ]);
 
-        $this->emailService->sendVerificationEmail($data->email, $token, $data->first_name ?? 'User');
+        $this->emailService->sendVerificationEmail($data->email, $token, $data->name);
 
         echo json_encode(["status" => "success", "message" => "Registration successful! Please verify your email."]);
     }
 
     // =====================
-    // SMART LOGIN (USER & ADMIN)
+    // LOGIN (USER & ADMIN)
     // =====================
     public function login() {
         $data = json_decode(file_get_contents("php://input"));
-        $input = $data->login_input ?? $data->email ?? null;
+        $email = $data->email ?? $data->login_input ?? null;
         $password = $data->password ?? null;
 
-        if (!$input || !$password) {
-            echo json_encode(["status" => "error", "message" => "Credentials required"]);
+        if (!$email || !$password) {
+            echo json_encode(["status" => "error", "message" => "Email and password required"]);
             return;
         }
 
-        $field = str_contains($input, '@') ? 'email' : 'username';
-        $stmt = $this->conn->prepare("SELECT * FROM users WHERE $field = ?");
-        $stmt->execute([$input]);
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password'])) {
             
-            // Only block passengers if not verified. Admins skip verification check if needed.
-            if ($user['role'] === 'user' && !$user['is_verified']) {
+            // Only block if not verified. 
+            if (!$user['is_verified']) {
                 echo json_encode(["status" => "error", "message" => "Please verify your email first"]);
                 return;
             }
@@ -89,9 +88,10 @@ class AuthController {
             
             $token = $this->jwt->createToken([
                 "id" => $user['id'],
-                "username" => $user['username'],
+                "name" => $user['name'],
                 "email" => $user['email'],
-                "role" => $user['role']
+                "role" => $user['role'],
+                "user_type" => $user['user_type']
             ]);
 
             echo json_encode([
@@ -105,10 +105,10 @@ class AuthController {
     }
 
     // =====================
-    // CHANGE PASSWORD (SECURE)
+    // PASSWORD MANAGEMENT
     // =====================
     public function changePassword() {
-        $user = $this->auth->verify(); // Requires login
+        $user = $this->auth->verify(); 
         $data = json_decode(file_get_contents("php://input"));
         
         $old_pass = $data->old_password ?? null;
@@ -133,9 +133,33 @@ class AuthController {
         }
     }
 
-    // =====================
-    // RESET PASSWORD
-    // =====================
+    public function forgotPassword() {
+        $data = json_decode(file_get_contents("php://input"));
+        $email = $data->email ?? null;
+
+        if (!$email) {
+            echo json_encode(["status" => "error", "message" => "Email is required"]);
+            return;
+        }
+
+        $stmt = $this->conn->prepare("SELECT id, name FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            $token = bin2hex(random_bytes(32));
+            $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            
+            $stmt = $this->conn->prepare("UPDATE users SET reset_token = ?, token_expiry = ? WHERE id = ?");
+            $stmt->execute([$token, $expiry, $user['id']]);
+            
+            $this->emailService->sendResetEmail($email, $token, $user['name']);
+        }
+
+        // Always return success for security (prevent email harvesting)
+        echo json_encode(["status" => "success", "message" => "If the email exists, a reset link has been sent."]);
+    }
+
     public function resetPassword() {
         $data = json_decode(file_get_contents("php://input"));
         $token = isset($data->token) ? trim($data->token) : null;
@@ -146,7 +170,7 @@ class AuthController {
             return;
         }
 
-        $stmt = $this->conn->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_token_expiry > CURRENT_TIMESTAMP");
+        $stmt = $this->conn->prepare("SELECT id FROM users WHERE reset_token = ? AND token_expiry > CURRENT_TIMESTAMP");
         $stmt->execute([$token]);
         $user = $stmt->fetch();
 
@@ -156,7 +180,7 @@ class AuthController {
         }
 
         $hashed = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $this->conn->prepare("UPDATE users SET password = ?, is_verified = 1, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?");
+        $stmt = $this->conn->prepare("UPDATE users SET password = ?, is_verified = 1, reset_token = NULL, token_expiry = NULL WHERE id = ?");
         $stmt->execute([$hashed, $user['id']]);
 
         echo json_encode(["status" => "success", "message" => "Password reset! You can now log in."]);
@@ -179,9 +203,12 @@ class AuthController {
         exit;
     }
 
+    // =====================
+    // PROFILE MANAGEMENT
+    // =====================
     public function getUserProfile() {
         $user = $this->auth->verify();
-        $stmt = $this->conn->prepare("SELECT id, first_name, last_name, username, email, phone_number, passport_number, date_of_birth FROM users WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT id, name, email, role, user_type, created_at FROM users WHERE id = ?");
         $stmt->execute([$user->id]);
         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode(["status" => "success", "data" => $profile]);
@@ -191,13 +218,10 @@ class AuthController {
         $user = $this->auth->verify();
         $data = json_decode(file_get_contents("php://input"));
         
-        $stmt = $this->conn->prepare("UPDATE users SET first_name = ?, last_name = ?, phone_number = ?, passport_number = ?, date_of_birth = ? WHERE id = ?");
+        $stmt = $this->conn->prepare("UPDATE users SET name = ?, user_type = ? WHERE id = ?");
         $stmt->execute([
-            $data->first_name ?? '',
-            $data->last_name ?? '',
-            $data->phone_number ?? '',
-            $data->passport_number ?? '',
-            $data->date_of_birth ?? null,
+            $data->name,
+            $data->user_type ?? 'regular',
             $user->id
         ]);
 

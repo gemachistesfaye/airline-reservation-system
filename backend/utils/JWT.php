@@ -19,10 +19,10 @@ class JWTHandler {
             "exp" => time() + 3600 * 24, // 24 hours
             "user" => [
                 "id" => $user["id"] ?? null,
-                "first_name" => $user["first_name"] ?? null,
-                "last_name" => $user["last_name"] ?? null,
+                "name" => $user["name"] ?? null,
                 "email" => $user["email"] ?? null,
-                "role" => $user["role"] ?? "user"
+                "role" => $user["role"] ?? "user",
+                "user_type" => $user["user_type"] ?? "regular"
             ]
         ];
         return JWT::encode($payload, $this->secret, 'HS256');

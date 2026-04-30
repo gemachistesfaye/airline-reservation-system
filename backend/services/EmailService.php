@@ -57,7 +57,7 @@ class EmailService {
         }
     }
 
-    public function sendPasswordResetEmail($email, $token, $name) {
+    public function sendResetEmail($email, $token, $name) {
         try {
             $this->mail->clearAddresses();
             $this->mail->addAddress($email, $name);
@@ -100,6 +100,7 @@ class EmailService {
                         <p style='margin: 5px 0;'><strong>Class:</strong> " . $booking['seat_class'] . "</p>
                         <p style='margin: 5px 0;'><strong>Seat:</strong> " . $booking['seat_number'] . "</p>
                         <p style='margin: 5px 0;'><strong>Ticket:</strong> " . $booking['ticket_number'] . "</p>
+                        <p style='margin: 5px 0;'><strong>Amount Due:</strong> $" . $booking['total_price'] . "</p>
                     </div>
 
                     <p>To finalize your reservation, please complete the payment using the button below:</p>

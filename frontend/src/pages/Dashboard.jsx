@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getUserBookings, cancelBooking } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plane, Calendar, MapPin, Ticket, AlertCircle, X, CheckCircle2, Clock, User, ShieldCheck, CreditCard, ChevronRight } from "lucide-react";
+import { Plane, Calendar, MapPin, Ticket, AlertCircle, X, CheckCircle2, Clock, User, ShieldCheck, CreditCard, ChevronRight, GraduationCap } from "lucide-react";
 
 export default function Dashboard() {
   const { showToast } = useToast();
@@ -51,7 +51,10 @@ export default function Dashboard() {
                <User size={32} />
             </div>
             <div>
-               <h2 className="text-3xl font-black text-gray-900 tracking-tight">{user.first_name} {user.last_name}</h2>
+               <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                 {user.name}
+                 {user.user_type === 'student' && <GraduationCap size={24} className="text-emerald-500" />}
+               </h2>
                <div className="flex items-center gap-4 mt-1">
                   <p className="text-gray-400 font-medium">{user.email}</p>
                   <span className="w-1.5 h-1.5 rounded-full bg-gray-200"></span>
@@ -126,9 +129,15 @@ export default function Dashboard() {
                             }`}>{b.status}</h4>
                           </div>
                         </div>
-                        <div className="bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100 flex items-center gap-3">
-                          <Ticket className="text-primary-600" size={20} />
-                          <span className="font-mono font-black text-gray-900">{b.ticket_number}</span>
+                        <div className="flex items-center gap-4">
+                            <div className="text-right mr-4">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Fare</p>
+                                <p className="text-xl font-black text-gray-900">${parseFloat(b.total_price).toFixed(2)}</p>
+                            </div>
+                            <div className="bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100 flex items-center gap-3">
+                                <Ticket className="text-primary-600" size={20} />
+                                <span className="font-mono font-black text-gray-900">{b.ticket_number}</span>
+                            </div>
                         </div>
                       </div>
 

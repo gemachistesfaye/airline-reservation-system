@@ -22,30 +22,36 @@ class BookingController {
             return;
         }
 
+        // Standardize class names to match DB Enum
         $classMap = [
-            'Economy' => 'economy_seats_avail',
-            'Business' => 'business_seats_avail',
+            'Economy Class' => 'economy_seats_avail',
+            'Business Class' => 'business_seats_avail',
             'First Class' => 'first_class_seats_avail'
         ];
 
-        if (!array_key_exists($data->seat_class, $classMap)) {
-            echo json_encode(["status" => "error", "message" => "Invalid seat class selected"]);
+        // Handle frontend variations if any
+        $seat_class = $data->seat_class;
+        if ($seat_class === 'Economy') $seat_class = 'Economy Class';
+        if ($seat_class === 'Business') $seat_class = 'Business Class';
+
+        if (!array_key_exists($seat_class, $classMap)) {
+            echo json_encode(["status" => "error", "message" => "Invalid seat class selected: " . $seat_class]);
             return;
         }
 
-        $availCol = $classMap[$data->seat_class];
+        $availCol = $classMap[$seat_class];
 
         $this->conn->beginTransaction();
 
         try {
-            // 1. LOCK FLIGHT RECORD (CLASS SPECIFIC)
-            $stmt = $this->conn->prepare("SELECT $availCol, flight_number, origin, destination FROM flights WHERE flight_id = ? FOR UPDATE");
+            // 1. LOCK FLIGHT RECORD & GET BASE PRICE
+            $stmt = $this->conn->prepare("SELECT $availCol, flight_number, origin, destination, base_price FROM flights WHERE flight_id = ? FOR UPDATE");
             $stmt->execute([$data->flight_id]);
             $flight = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$flight || $flight[$availCol] <= 0) {
                 $this->conn->rollBack();
-                echo json_encode(["status" => "error", "message" => "No seats available in " . $data->seat_class]);
+                echo json_encode(["status" => "error", "message" => "No seats available in " . $seat_class]);
                 return;
             }
 
@@ -60,48 +66,77 @@ class BookingController {
                 return;
             }
 
-            if ($seat['class'] !== $data->seat_class) {
+            if ($seat['class'] !== $seat_class) {
                 $this->conn->rollBack();
-                echo json_encode(["status" => "error", "message" => "Seat " . $data->seat_number . " is not " . $data->seat_class . " (it is " . $seat['class'] . ")"]);
+                echo json_encode(["status" => "error", "message" => "Seat " . $data->seat_number . " is not " . $seat_class . " (it is " . $seat['class'] . ")"]);
                 return;
             }
 
-            // 3. GENERATE TICKET & INSERT BOOKING (PENDING PAYMENT)
+            // 3. CALCULATE PRICE & DISCOUNT
+            $base_price = (float)$flight['base_price'];
+            // Price multipliers for classes
+            $multipliers = [
+                'Economy Class' => 1.0,
+                'Business Class' => 2.5,
+                'First Class' => 5.0
+            ];
+            $final_base = $base_price * $multipliers[$seat_class];
+            
+            $discount = 0.00;
+            // Student Discount: 20%
+            if ($user->user_type === 'student') {
+                $discount = $final_base * 0.20;
+            }
+            $total_price = $final_base - $discount;
+
+            // 4. GENERATE TICKET & INSERT BOOKING
             $ticket_number = 'AERO-' . strtoupper(substr(uniqid(), -4)) . rand(10, 99);
             
             $insert = $this->conn->prepare("
-                INSERT INTO bookings (user_id, flight_id, seat_number, seat_class, status, payment_status, ticket_number)
-                VALUES (?, ?, ?, ?, 'Pending Payment', 'pending', ?)
+                INSERT INTO bookings (user_id, flight_id, seat_number, seat_class, base_price, discount_amount, total_price, status, payment_status, ticket_number)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending Payment', 'pending', ?)
             ");
-            $insert->execute([$user->id, $data->flight_id, $data->seat_number, $data->seat_class, $ticket_number]);
+            $insert->execute([
+                $user->id, 
+                $data->flight_id, 
+                $data->seat_number, 
+                $seat_class, 
+                $final_base, 
+                $discount, 
+                $total_price, 
+                $ticket_number
+            ]);
             $booking_id = $this->conn->lastInsertId();
 
-            // 4. UPDATE CLASS SPECIFIC AVAILABILITY
+            // 5. UPDATE CLASS SPECIFIC AVAILABILITY
             $updateFlight = $this->conn->prepare("UPDATE flights SET $availCol = $availCol - 1, available_seats = available_seats - 1 WHERE flight_id = ?");
             $updateFlight->execute([$data->flight_id]);
 
-            // 5. UPDATE SEAT STATUS
+            // 6. UPDATE SEAT STATUS
             $updateSeat = $this->conn->prepare("UPDATE seats SET availability_status = 'booked' WHERE flight_id = ? AND seat_number = ?");
             $updateSeat->execute([$data->flight_id, $data->seat_number]);
 
             $this->conn->commit();
 
-            // 6. SEND PAYMENT EMAIL
+            // 7. SEND PAYMENT EMAIL
             $emailService = new EmailService();
-            $emailService->sendPaymentEmail($user->email, $user->first_name, [
+            $emailService->sendPaymentEmail($user->email, $user->name, [
                 'booking_id' => $booking_id,
                 'flight_number' => $flight['flight_number'],
                 'origin' => $flight['origin'],
                 'destination' => $flight['destination'],
-                'seat_class' => $data->seat_class,
+                'seat_class' => $seat_class,
                 'seat_number' => $data->seat_number,
+                'total_price' => number_format($total_price, 2),
                 'ticket_number' => $ticket_number
             ]);
 
             echo json_encode([
                 "status" => "success", 
                 "message" => "Booking created! Please check your email for the payment link.",
-                "booking_id" => $booking_id
+                "booking_id" => $booking_id,
+                "total_price" => $total_price,
+                "discount_applied" => ($discount > 0)
             ]);
 
         } catch (Exception $e) {
@@ -115,7 +150,8 @@ class BookingController {
         $stmt = $this->conn->prepare("
             SELECT 
                 b.booking_id, f.flight_number, f.origin, f.destination, f.departure_time,
-                b.seat_number, b.seat_class, b.booking_date, b.status, b.payment_status, b.ticket_number
+                b.seat_number, b.seat_class, b.booking_date, b.status, b.payment_status, b.ticket_number,
+                b.total_price
             FROM bookings b
             JOIN flights f ON b.flight_id = f.flight_id
             WHERE b.user_id = ?
@@ -147,8 +183,8 @@ class BookingController {
         }
 
         $classMap = [
-            'Economy' => 'economy_seats_avail',
-            'Business' => 'business_seats_avail',
+            'Economy Class' => 'economy_seats_avail',
+            'Business Class' => 'business_seats_avail',
             'First Class' => 'first_class_seats_avail'
         ];
         $availCol = $classMap[$booking['seat_class']];

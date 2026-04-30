@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getFlight, getSeats, bookFlight } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plane, MapPin, Calendar, Users, CheckCircle2, Ticket, ArrowRight, ShieldCheck, CreditCard, Star, Crown, Armchair } from "lucide-react";
+import { Plane, MapPin, Calendar, Users, CheckCircle2, Ticket, ArrowRight, ShieldCheck, CreditCard, Star, Crown, Armchair, GraduationCap } from "lucide-react";
 import SeatSelector from "../components/SeatSelector";
 
 export default function Booking() {
@@ -19,10 +19,13 @@ export default function Booking() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [successBooking, setSuccessBooking] = useState(null);
 
-  const prices = {
-    'Economy': 249,
-    'Business': 599,
-    'First Class': 1249
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isStudent = user.user_type === 'student';
+
+  const classMultipliers = {
+    'Economy Class': 1.0,
+    'Business Class': 2.5,
+    'First Class': 5.0
   };
 
   useEffect(() => {
@@ -71,17 +74,17 @@ export default function Booking() {
           
           <div className="bg-gray-900 text-white p-8 rounded-[2.5rem] shadow-2xl mb-10 text-left relative overflow-hidden">
              <div className="absolute top-[-10%] right-[-10%] text-white opacity-5 transform rotate-12"><Plane size={200}/></div>
-             <p className="text-xs font-bold text-primary-400 uppercase tracking-widest mb-2">Reservation Status</p>
+             <p className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-2">Reservation Status</p>
              <h3 className="text-2xl font-black mb-6">Pending Payment</h3>
              <div className="flex justify-between border-t border-white/10 pt-6">
-               <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Class</p>
-                  <p className="font-bold">{selectedClass}</p>
-               </div>
-               <div className="text-right">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Seat</p>
-                  <p className="font-bold text-primary-400">{selectedSeat}</p>
-               </div>
+                <div>
+                   <p className="text-[10px] font-bold text-gray-400 uppercase">Class</p>
+                   <p className="font-bold">{selectedClass}</p>
+                </div>
+                <div className="text-right">
+                   <p className="text-[10px] font-bold text-gray-400 uppercase">Seat</p>
+                   <p className="font-bold text-primary-400">{selectedSeat}</p>
+                </div>
              </div>
           </div>
 
@@ -95,9 +98,10 @@ export default function Booking() {
     );
   }
 
-  const basePrice = prices[selectedClass] || 0;
-  const taxes = basePrice * 0.15;
-  const total = basePrice + taxes;
+  const baseFare = flight.base_price * (classMultipliers[selectedClass] || 0);
+  const studentDiscount = isStudent ? baseFare * 0.20 : 0;
+  const taxes = (baseFare - studentDiscount) * 0.15;
+  const total = baseFare - studentDiscount + taxes;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pt-32 pb-20">
@@ -112,27 +116,36 @@ export default function Booking() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white p-10 rounded-[3rem] shadow-xl shadow-blue-900/5 border border-gray-100"
             >
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Star size={24}/></div>
-                <h3 className="text-2xl font-black text-gray-900 tracking-tight">Step 1: Choose Your Class</h3>
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Star size={24}/></div>
+                    <h3 className="text-2xl font-black text-gray-900 tracking-tight">Step 1: Choose Your Class</h3>
+                </div>
+                {isStudent && (
+                    <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl border border-emerald-100">
+                        <GraduationCap size={18} />
+                        <span className="text-xs font-black uppercase tracking-widest">Student Benefit Active</span>
+                    </div>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { name: 'First Class', icon: <Crown size={24}/>, price: 1249, seats: flight.first_class_seats_avail, color: 'amber' },
-                  { name: 'Business', icon: <Star size={24}/>, price: 599, seats: flight.business_seats_avail, color: 'indigo' },
-                  { name: 'Economy', icon: <Armchair size={24}/>, price: 249, seats: flight.economy_seats_avail, color: 'emerald' }
+                  { name: 'First Class', icon: <Crown size={24}/>, multiplier: 5.0, seats: flight.first_class_seats_avail, color: 'amber' },
+                  { name: 'Business Class', icon: <Star size={24}/>, multiplier: 2.5, seats: flight.business_seats_avail, color: 'indigo' },
+                  { name: 'Economy Class', icon: <Armchair size={24}/>, multiplier: 1.0, seats: flight.economy_seats_avail, color: 'emerald' }
                 ].map(c => (
                   <button
                     key={c.name}
+                    disabled={c.seats === 0}
                     onClick={() => { setSelectedClass(c.name); setSelectedSeat(null); }}
-                    className={`p-6 rounded-[2rem] border-2 transition-all text-left group ${selectedClass === c.name ? 'border-primary-600 bg-primary-50/30' : 'border-gray-100 hover:border-gray-200 bg-gray-50/50'}`}
+                    className={`p-6 rounded-[2rem] border-2 transition-all text-left group relative overflow-hidden ${selectedClass === c.name ? 'border-primary-600 bg-primary-50/30' : 'border-gray-100 hover:border-gray-200 bg-gray-50/50'} ${c.seats === 0 ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                   >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-colors ${selectedClass === c.name ? 'bg-primary-600 text-white' : 'bg-white text-gray-400 group-hover:text-gray-600'}`}>
                       {c.icon}
                     </div>
-                    <p className="font-black text-gray-900 text-lg">{c.name}</p>
-                    <p className="text-primary-600 font-bold text-sm mb-4">${c.price}</p>
+                    <p className="font-black text-gray-900 text-lg">{c.name.split(' ')[0]}</p>
+                    <p className="text-primary-600 font-bold text-sm mb-4">${(flight.base_price * c.multiplier).toFixed(0)}</p>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
                        <span>Availability</span>
                        <span className={c.seats > 0 ? 'text-green-600' : 'text-red-500'}>{c.seats} left</span>
@@ -142,7 +155,7 @@ export default function Booking() {
               </div>
             </motion.div>
 
-            {/* Step 2: Seat Selector (Only visible after class selection) */}
+            {/* Step 2: Seat Selector */}
             <AnimatePresence>
               {selectedClass && (
                 <motion.div 
@@ -196,8 +209,14 @@ export default function Booking() {
                 <div className="border-t border-gray-50 pt-6 mb-8">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-400 font-medium">{selectedClass} Fare</span>
-                    <span className="text-gray-900 font-bold">${basePrice.toFixed(2)}</span>
+                    <span className="text-gray-900 font-bold">${baseFare.toFixed(2)}</span>
                   </div>
+                  {isStudent && (
+                      <div className="flex justify-between items-center mb-2 text-emerald-600">
+                        <span className="font-bold flex items-center gap-2"><GraduationCap size={16}/> Student Discount (20%)</span>
+                        <span className="font-bold">-${studentDiscount.toFixed(2)}</span>
+                      </div>
+                  )}
                   <div className="flex justify-between items-center mb-6">
                     <span className="text-gray-400 font-medium">Taxes & Fees (15%)</span>
                     <span className="text-gray-900 font-bold">${taxes.toFixed(2)}</span>

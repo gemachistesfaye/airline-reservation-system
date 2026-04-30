@@ -57,6 +57,7 @@ class FlightController {
         $eco = (int)($data->economy_seats ?? 40);
         $bus = (int)($data->business_seats ?? 12);
         $fst = (int)($data->first_class_seats ?? 6);
+        $base_price = (float)($data->base_price ?? 100.0);
         $total = $eco + $bus + $fst;
 
         if (empty($data->flight_number) || empty($data->origin) || empty($data->destination)) {
@@ -74,9 +75,9 @@ class FlightController {
                     economy_seats_total, economy_seats_avail, 
                     business_seats_total, business_seats_avail, 
                     first_class_seats_total, first_class_seats_avail, 
-                    status
+                    base_price, status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $stmt->execute([
@@ -90,6 +91,7 @@ class FlightController {
                 $eco, $eco,
                 $bus, $bus,
                 $fst, $fst,
+                $base_price,
                 $data->status ?? 'Scheduled'
             ]);
 
@@ -119,7 +121,7 @@ class FlightController {
 
         $stmt = $this->conn->prepare("
             UPDATE flights 
-            SET flight_number = ?, origin = ?, destination = ?, departure_time = ?, arrival_time = ?, status = ?
+            SET flight_number = ?, origin = ?, destination = ?, departure_time = ?, arrival_time = ?, base_price = ?, status = ?
             WHERE flight_id = ?
         ");
 
@@ -129,6 +131,7 @@ class FlightController {
             $data->destination,
             $data->departure_time,
             $data->arrival_time,
+            (float)($data->base_price ?? 100.0),
             $data->status,
             $flight_id
         ]);
