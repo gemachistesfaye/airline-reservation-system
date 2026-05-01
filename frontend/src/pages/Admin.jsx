@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminGetStats, adminGetAnalytics, adminGetBookings, getFlights, adminAddFlight, adminUpdateFlight, adminDeleteFlight, adminGetUsers, adminToggleUserStatus } from "../services/api";
+import { adminGetStats, adminGetAnalytics, adminGetBookings, getFlights, adminAddFlight, adminUpdateFlight, adminDeleteFlight, adminGetUsers, adminToggleUserStatus, adminGetStudentVerifications, adminReviewStudentVerification } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutDashboard, Plane, Users, Calendar, TrendingUp, Trash2, Edit3, Plus, X, Search, MapPin, Clock, ShieldCheck, ShieldAlert, CreditCard, Star, Crown, Armchair, GraduationCap, DollarSign, BarChart3 } from "lucide-react";
@@ -11,6 +11,7 @@ export default function Admin() {
   const [flights, setFlights] = useState([]);
   const [adminBookings, setAdminBookings] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [studentVerifications, setStudentVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [editingFlight, setEditingFlight] = useState(null);
@@ -31,14 +32,15 @@ export default function Admin() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, analyticsRes, bookRes, flyRes, usersRes] = await Promise.all([
-        adminGetStats(), adminGetAnalytics(), adminGetBookings(), getFlights(), adminGetUsers()
+      const [statsRes, analyticsRes, bookRes, flyRes, usersRes, studentVerifyRes] = await Promise.all([
+        adminGetStats(), adminGetAnalytics(), adminGetBookings(), getFlights(), adminGetUsers(), adminGetStudentVerifications()
       ]);
       setStats(statsRes.data);
       setAnalytics(analyticsRes.data);
       setAdminBookings(bookRes.data);
       setFlights(flyRes.data);
       setAdminUsers(usersRes.data);
+      setStudentVerifications(studentVerifyRes.data);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -121,6 +123,19 @@ export default function Admin() {
     }
   };
 
+  const handleStudentVerification = async (id, action) => {
+    setActionLoading(true);
+    try {
+      const res = await adminReviewStudentVerification(id, action);
+      showToast(res.message);
+      fetchData();
+    } catch (err) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
 
   return (
@@ -138,6 +153,7 @@ export default function Admin() {
             { id: "flights", icon: <Plane size={20} />, label: "Flight Fleet" },
             { id: "bookings", icon: <Calendar size={20} />, label: "Passenger Manifest" },
             { id: "users", icon: <Users size={20} />, label: "User Accounts" },
+            { id: "students", icon: <GraduationCap size={20} />, label: "Student IDs" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -372,6 +388,41 @@ export default function Admin() {
                                   {u.is_verified ? 'Suspend User' : 'Restore Access'}
                               </button>
                           )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "students" && (
+              <motion.div key="std" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
+                  <h3 className="text-2xl font-black text-gray-900 mb-8">Student Verification Requests</h3>
+                  <div className="space-y-4">
+                    {studentVerifications.length === 0 && (
+                      <p className="text-sm font-semibold text-gray-500">No student IDs submitted yet.</p>
+                    )}
+                    {studentVerifications.map((u) => (
+                      <div key={u.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-5 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-black text-gray-900">{u.name}</p>
+                          <p className="text-xs font-semibold text-gray-500">{u.email}</p>
+                          <p className="text-xs font-bold text-primary-600 mt-1 uppercase">Status: {u.student_verification_status}</p>
+                          {u.student_id_file && (
+                            <a href={`http://localhost/airline-reservation-system/backend/${u.student_id_file}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-indigo-600 hover:underline">
+                              View uploaded ID
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button disabled={actionLoading || u.student_verified === 1} onClick={() => handleStudentVerification(u.id, "approve")} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white disabled:opacity-60">
+                            Approve
+                          </button>
+                          <button disabled={actionLoading} onClick={() => handleStudentVerification(u.id, "reject")} className="rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white disabled:opacity-60">
+                            Reject
+                          </button>
                         </div>
                       </div>
                     ))}

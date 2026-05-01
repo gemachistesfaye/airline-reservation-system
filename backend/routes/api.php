@@ -60,6 +60,11 @@ if ($route === "/profile" && $method === "POST") {
     exit;
 }
 
+if ($route === "/profile/student-id" && $method === "POST") {
+    (new AuthController($conn))->uploadStudentId();
+    exit;
+}
+
 // =========================
 // FLIGHT ROUTES
 // =========================
@@ -149,6 +154,16 @@ if ($route === "/admin/users" && $method === "GET") {
 }
 if ($route === "/admin/users/toggle" && $method === "POST") {
     (new AdminController($conn))->toggleUserStatus();
+    exit;
+}
+if ($route === "/admin/student-verifications" && $method === "GET") {
+    (new AdminController($conn))->getStudentVerificationRequests();
+    exit;
+}
+if (strpos($route, "/admin/student-verifications/") === 0 && $method === "POST") {
+    $parts = explode("/", $route);
+    $user_id = end($parts);
+    (new AdminController($conn))->reviewStudentVerification($user_id);
     exit;
 }
 

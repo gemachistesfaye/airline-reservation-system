@@ -13,6 +13,7 @@ export default function Booking() {
 
   const [flight, setFlight] = useState(null);
   const [seats, setSeats] = useState([]);
+  const [classSeatCounts, setClassSeatCounts] = useState({});
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,7 @@ export default function Booking() {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isStudent = user.user_type === 'student';
+  const studentVerified = Number(user.student_verified || 0) === 1;
 
   const classMultipliers = {
     'Economy Class': 1.0,
@@ -33,6 +35,7 @@ export default function Booking() {
       .then(([flightRes, seatsRes]) => {
         setFlight(flightRes.data);
         setSeats(seatsRes.data);
+        setClassSeatCounts(seatsRes.class_seat_counts || {});
       })
       .catch(err => showToast(err.message, 'error'))
       .finally(() => setLoading(false));
@@ -47,6 +50,29 @@ export default function Booking() {
         seat_number: selectedSeat, 
         seat_class: selectedClass 
       });
+      setFlight((prev) => {
+        if (!prev) return prev;
+        const classToKey = {
+          "Economy Class": "economy_seats_avail",
+          "Business Class": "business_seats_avail",
+          "First Class": "first_class_seats_avail"
+        };
+        const key = classToKey[selectedClass];
+        return {
+          ...prev,
+          available_seats: Math.max(0, Number(prev.available_seats) - 1),
+          [key]: Math.max(0, Number(prev[key]) - 1)
+        };
+      });
+      setClassSeatCounts((prev) => ({
+        ...prev,
+        [selectedClass]: Math.max(0, Number(prev?.[selectedClass] || 0) - 1)
+      }));
+      setSeats((prev) =>
+        prev.map((seat) =>
+          seat.seat_number === selectedSeat ? { ...seat, availability_status: "booked" } : seat
+        )
+      );
       setSuccessBooking(res.booking_id);
       showToast(res.message);
     } catch (err) {
@@ -99,7 +125,7 @@ export default function Booking() {
   }
 
   const baseFare = flight.base_price * (classMultipliers[selectedClass] || 0);
-  const studentDiscount = isStudent ? baseFare * 0.20 : 0;
+  const studentDiscount = isStudent && studentVerified ? baseFare * 0.20 : 0;
   const taxes = (baseFare - studentDiscount) * 0.15;
   const total = baseFare - studentDiscount + taxes;
 
@@ -131,9 +157,9 @@ export default function Booking() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { name: 'First Class', icon: <Crown size={24}/>, multiplier: 5.0, seats: flight.first_class_seats_avail, color: 'amber' },
-                  { name: 'Business Class', icon: <Star size={24}/>, multiplier: 2.5, seats: flight.business_seats_avail, color: 'indigo' },
-                  { name: 'Economy Class', icon: <Armchair size={24}/>, multiplier: 1.0, seats: flight.economy_seats_avail, color: 'emerald' }
+                  { name: 'First Class', icon: <Crown size={24}/>, multiplier: 5.0, seats: classSeatCounts["First Class"] ?? flight.first_class_seats_avail, color: 'amber' },
+                  { name: 'Business Class', icon: <Star size={24}/>, multiplier: 2.5, seats: classSeatCounts["Business Class"] ?? flight.business_seats_avail, color: 'indigo' },
+                  { name: 'Economy Class', icon: <Armchair size={24}/>, multiplier: 1.0, seats: classSeatCounts["Economy Class"] ?? flight.economy_seats_avail, color: 'emerald' }
                 ].map(c => (
                   <button
                     key={c.name}
@@ -144,12 +170,13 @@ export default function Booking() {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-colors ${selectedClass === c.name ? 'bg-primary-600 text-white' : 'bg-white text-gray-400 group-hover:text-gray-600'}`}>
                       {c.icon}
                     </div>
-                    <p className="font-black text-gray-900 text-lg">{c.name.split(' ')[0]}</p>
+                    <p className="font-black text-gray-900 text-lg">{c.name}</p>
                     <p className="text-primary-600 font-bold text-sm mb-4">${(flight.base_price * c.multiplier).toFixed(0)}</p>
                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
                        <span>Availability</span>
-                       <span className={c.seats > 0 ? 'text-green-600' : 'text-red-500'}>{c.seats} left</span>
+                       <span className={c.seats > 0 ? 'text-green-600' : 'text-red-500'}>{c.seats} seats left</span>
                     </div>
+                    {c.seats === 0 && <p className="mt-3 text-[11px] font-bold text-red-500">This class is full.</p>}
                   </button>
                 ))}
               </div>
@@ -211,11 +238,16 @@ export default function Booking() {
                     <span className="text-gray-400 font-medium">{selectedClass} Fare</span>
                     <span className="text-gray-900 font-bold">${baseFare.toFixed(2)}</span>
                   </div>
-                  {isStudent && (
+                  {isStudent && studentVerified && (
                       <div className="flex justify-between items-center mb-2 text-emerald-600">
                         <span className="font-bold flex items-center gap-2"><GraduationCap size={16}/> Student Discount (20%)</span>
                         <span className="font-bold">-${studentDiscount.toFixed(2)}</span>
                       </div>
+                  )}
+                  {isStudent && !studentVerified && (
+                    <div className="mb-3 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-xs font-semibold text-amber-700">
+                      Student discount pending verification.
+                    </div>
                   )}
                   <div className="flex justify-between items-center mb-6">
                     <span className="text-gray-400 font-medium">Taxes & Fees (15%)</span>

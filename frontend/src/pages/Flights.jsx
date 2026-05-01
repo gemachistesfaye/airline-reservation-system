@@ -220,6 +220,17 @@ export default function Flights() {
                         <div className="text-right">
                           <p className="text-3xl font-black text-gray-900 mb-1">${parseFloat(f.base_price).toFixed(0)}</p>
                           <span className="text-[10px] font-black text-green-600 bg-green-50 px-3 py-1 rounded-full uppercase tracking-widest">{f.available_seats} seats left</span>
+                          <div className="mt-3 flex flex-wrap justify-end gap-2">
+                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                              Eco: {f.economy_seats_avail}
+                            </span>
+                            <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full">
+                              Bus: {f.business_seats_avail}
+                            </span>
+                            <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                              First: {f.first_class_seats_avail}
+                            </span>
+                          </div>
                         </div>
                         <button 
                           onClick={() => navigate(`/booking/${f.flight_id}`)}
@@ -247,4 +258,4 @@ export default function Flights() {
       </div>
     </div>
   );
-}
+}

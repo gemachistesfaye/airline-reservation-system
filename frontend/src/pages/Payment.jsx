@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "../components/Toast";
 import { motion } from "framer-motion";
 import { CreditCard, ShieldCheck, CheckCircle2, ArrowLeft, Lock } from "lucide-react";
+import { processPayment } from "../services/api";
 
 export default function Payment() {
   const { booking_id } = useParams();
@@ -14,18 +15,11 @@ export default function Payment() {
   const handlePayment = async () => {
     setProcessing(true);
     try {
-      const res = await fetch(`http://localhost:8080/process-payment/${booking_id}`, {
-        method: "POST"
-      }).then(r => r.json());
-
-      if (res.status === "success") {
-        setSuccess(true);
-        showToast(res.message);
-      } else {
-        showToast(res.message, "error");
-      }
+      const res = await processPayment(booking_id);
+      setSuccess(true);
+      showToast(res.message || "Payment successful.");
     } catch (err) {
-      showToast("Payment service unavailable", "error");
+      showToast(err.message || "Payment service unavailable", "error");
     } finally {
       setProcessing(false);
     }

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Armchair, Crown } from "lucide-react";
+import { User, Armchair } from "lucide-react";
 
 export default function SeatSelector({ seats, onSelect }) {
   const [selected, setSelected] = useState(null);
+  const seatLetters = ["A", "B", "C", "D", "E", "F"];
 
   const handleSelect = (seat) => {
     if (seat.availability_status === "booked") return;
@@ -12,11 +13,20 @@ export default function SeatSelector({ seats, onSelect }) {
     onSelect(newSelection);
   };
 
-  // Group seats by rows (6 seats per row: A, B, C, corridor, D, E, F)
-  const rows = [];
-  for (let i = 0; i < seats.length; i += 6) {
-    rows.push(seats.slice(i, i + 6));
-  }
+  const grouped = seats.reduce((acc, seat) => {
+    const match = String(seat.seat_number).match(/^([A-F])(\d+)$/i);
+    if (!match) return acc;
+    const letter = match[1].toUpperCase();
+    const rowNumber = Number(match[2]);
+    if (!acc[rowNumber]) {
+      acc[rowNumber] = {};
+    }
+    acc[rowNumber][letter] = seat;
+    return acc;
+  }, {});
+  const rowNumbers = Object.keys(grouped)
+    .map(Number)
+    .sort((a, b) => a - b);
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -31,49 +41,55 @@ export default function SeatSelector({ seats, onSelect }) {
       </div>
 
       <div className="space-y-4">
-        {rows.map((row, rowIdx) => {
-          const isBusiness = rowIdx < 3;
+        {rowNumbers.map((rowNumber) => {
+          const row = grouped[rowNumber];
           return (
-            <div key={rowIdx} className="flex items-center gap-4">
-              <div className={`w-8 text-[11px] font-black ${isBusiness ? 'text-amber-500' : 'text-gray-300'} text-center`}>
-                {rowIdx + 1}
+            <div key={rowNumber} className="flex items-center gap-4">
+              <div className="w-8 text-[11px] font-black text-gray-400 text-center">
+                {rowNumber}
               </div>
               
-              <div className={`flex items-center gap-3 p-2 rounded-2xl transition-colors ${isBusiness ? 'bg-amber-50/50 ring-1 ring-amber-100' : ''}`}>
+              <div className="flex items-center gap-3 p-2 rounded-2xl transition-colors">
                 {/* Left Group (A, B, C) */}
                 <div className="flex gap-2">
-                  {row.slice(0, 3).map((seat) => (
+                  {seatLetters.slice(0, 3).map((letter) => {
+                    const seat = row[letter];
+                    if (!seat) return <div key={`${rowNumber}-${letter}`} className="w-11 h-12" />;
+                    return (
                     <Seat 
                       key={seat.seat_number} 
                       seat={seat} 
-                      isBusiness={isBusiness}
                       isSelected={selected === seat.seat_number} 
                       onClick={() => handleSelect(seat)} 
                     />
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Corridor */}
                 <div className="w-12 h-10 flex items-center justify-center">
-                  <div className={`w-px h-full ${isBusiness ? 'bg-amber-200' : 'bg-gray-100'}`} />
+                  <div className="w-px h-full bg-gray-100" />
                 </div>
 
                 {/* Right Group (D, E, F) */}
                 <div className="flex gap-2">
-                  {row.slice(3, 6).map((seat) => (
+                  {seatLetters.slice(3, 6).map((letter) => {
+                    const seat = row[letter];
+                    if (!seat) return <div key={`${rowNumber}-${letter}`} className="w-11 h-12" />;
+                    return (
                     <Seat 
                       key={seat.seat_number} 
                       seat={seat} 
-                      isBusiness={isBusiness}
                       isSelected={selected === seat.seat_number} 
                       onClick={() => handleSelect(seat)} 
                     />
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className={`w-8 text-[11px] font-black ${isBusiness ? 'text-amber-500' : 'text-gray-300'} text-center`}>
-                {rowIdx + 1}
+              <div className="w-8 text-[11px] font-black text-gray-400 text-center">
+                {rowNumber}
               </div>
             </div>
           );
@@ -104,7 +120,7 @@ export default function SeatSelector({ seats, onSelect }) {
   );
 }
 
-function Seat({ seat, isSelected, onClick, isBusiness }) {
+function Seat({ seat, isSelected, onClick }) {
   const isBooked = seat.availability_status === "booked";
   
   return (
@@ -117,16 +133,15 @@ function Seat({ seat, isSelected, onClick, isBusiness }) {
         relative w-11 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group
         ${isBooked ? 'bg-red-500 text-white cursor-not-allowed shadow-inner opacity-80' : 
           isSelected ? 'bg-blue-500 text-white shadow-xl shadow-blue-500/40 ring-4 ring-blue-100 z-10' : 
-          isBusiness ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/30' :
           'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20'}
       `}
     >
-      {isBooked ? <XIcon size={16}/> : isSelected ? <User size={16}/> : isBusiness ? <Crown size={16}/> : <Armchair size={16}/>}
+      {isBooked ? <XIcon size={16}/> : isSelected ? <User size={16}/> : <Armchair size={16}/>}
       
       {/* Tooltip on hover */}
       {!isBooked && (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 shadow-xl">
-          {seat.seat_number} {isBusiness ? '(Business)' : ''}
+          {seat.seat_number}
         </div>
       )}
     </motion.button>

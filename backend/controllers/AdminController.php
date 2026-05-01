@@ -58,6 +58,7 @@ class AdminController {
                 b.seat_class,
                 b.booking_date,
                 b.status,
+                b.payment_status,
                 b.total_price,
                 b.ticket_number
             FROM bookings b
@@ -79,7 +80,11 @@ class AdminController {
     // =====================
     public function getAllUsers() {
         $this->auth->requireAdmin();
-        $stmt = $this->conn->query("SELECT id, name, email, role, user_type, is_verified, created_at FROM users ORDER BY created_at DESC");
+        $stmt = $this->conn->query("
+            SELECT id, name, email, role, user_type, is_student, student_id_file, student_verified, student_verification_status, is_verified, created_at
+            FROM users
+            ORDER BY created_at DESC
+        ");
         echo json_encode(["status" => "success", "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
     }
 
@@ -150,6 +155,48 @@ class AdminController {
                 "classUsage" => $classUsage,
                 "trends" => array_reverse($trends)
             ]
+        ]);
+    }
+
+    public function getStudentVerificationRequests() {
+        $this->auth->requireAdmin();
+        $stmt = $this->conn->query("
+            SELECT id, name, email, student_id_file, student_verified, student_verification_status, created_at
+            FROM users
+            WHERE is_student = 1 AND student_id_file IS NOT NULL
+            ORDER BY created_at DESC
+        ");
+        echo json_encode(["status" => "success", "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    }
+
+    public function reviewStudentVerification($user_id) {
+        $this->auth->requireAdmin();
+        $data = json_decode(file_get_contents("php://input"));
+        $action = $data->action ?? null;
+
+        if (!$user_id || !in_array($action, ['approve', 'reject'], true)) {
+            echo json_encode(["status" => "error", "message" => "Valid action (approve/reject) and user id are required"]);
+            return;
+        }
+
+        $verified = $action === 'approve' ? 1 : 0;
+        $status = $action === 'approve' ? 'approved' : 'rejected';
+
+        $stmt = $this->conn->prepare("
+            UPDATE users
+            SET student_verified = ?, student_verification_status = ?
+            WHERE id = ? AND is_student = 1
+        ");
+        $stmt->execute([$verified, $status, $user_id]);
+
+        if ($stmt->rowCount() === 0) {
+            echo json_encode(["status" => "error", "message" => "Student record not found"]);
+            return;
+        }
+
+        echo json_encode([
+            "status" => "success",
+            "message" => $action === 'approve' ? "Student verification approved" : "Student verification rejected"
         ]);
     }
 }

@@ -24,11 +24,13 @@ class PaymentController {
             $booking = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$booking) {
+                $this->conn->rollBack();
                 echo json_encode(["status" => "error", "message" => "Booking not found"]);
                 return;
             }
 
             if ($booking['status'] === 'Confirmed') {
+                $this->conn->rollBack();
                 echo json_encode(["status" => "success", "message" => "Payment already processed"]);
                 return;
             }

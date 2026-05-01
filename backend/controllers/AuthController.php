@@ -39,11 +39,12 @@ class AuthController {
 
         $password = password_hash($data->password, PASSWORD_BCRYPT);
         $token = bin2hex(random_bytes(32));
-        $user_type = $data->user_type ?? 'regular';
+        $user_type = ($data->user_type ?? 'regular') === 'student' ? 'student' : 'regular';
+        $is_student = $user_type === 'student' ? 1 : 0;
 
         $stmt = $this->conn->prepare("
-            INSERT INTO users (name, email, password, role, user_type, verification_token, is_verified)
-            VALUES (?, ?, ?, 'user', ?, ?, 0)
+            INSERT INTO users (name, email, password, role, user_type, is_student, student_verified, student_verification_status, verification_token, is_verified)
+            VALUES (?, ?, ?, 'user', ?, ?, 0, 'none', ?, 0)
         ");
 
         $stmt->execute([
@@ -51,6 +52,7 @@ class AuthController {
             $data->email,
             $password,
             $user_type,
+            $is_student,
             $token
         ]);
 
@@ -91,7 +93,10 @@ class AuthController {
                 "name" => $user['name'],
                 "email" => $user['email'],
                 "role" => $user['role'],
-                "user_type" => $user['user_type']
+                "user_type" => $user['user_type'],
+                "is_student" => (int)($user['is_student'] ?? 0),
+                "student_verified" => (int)($user['student_verified'] ?? 0),
+                "student_verification_status" => $user['student_verification_status'] ?? 'none'
             ]);
 
             echo json_encode([
@@ -208,7 +213,11 @@ class AuthController {
     // =====================
     public function getUserProfile() {
         $user = $this->auth->verify();
-        $stmt = $this->conn->prepare("SELECT id, name, email, role, user_type, created_at FROM users WHERE id = ?");
+        $stmt = $this->conn->prepare("
+            SELECT id, name, email, role, user_type, is_student, student_id_file, student_verified, student_verification_status, created_at
+            FROM users
+            WHERE id = ?
+        ");
         $stmt->execute([$user->id]);
         $profile = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode(["status" => "success", "data" => $profile]);
@@ -217,14 +226,82 @@ class AuthController {
     public function updateUserProfile() {
         $user = $this->auth->verify();
         $data = json_decode(file_get_contents("php://input"));
-        
-        $stmt = $this->conn->prepare("UPDATE users SET name = ?, user_type = ? WHERE id = ?");
+
+        $user_type = ($data->user_type ?? 'regular') === 'student' ? 'student' : 'regular';
+        $is_student = $user_type === 'student' ? 1 : 0;
+
+        $stmt = $this->conn->prepare("UPDATE users SET name = ?, user_type = ?, is_student = ? WHERE id = ?");
         $stmt->execute([
             $data->name,
-            $data->user_type ?? 'regular',
+            $user_type,
+            $is_student,
             $user->id
         ]);
 
         echo json_encode(["status" => "success", "message" => "Profile updated!"]);
+    }
+
+    public function uploadStudentId() {
+        $user = $this->auth->requireUser();
+
+        if (!isset($_FILES['student_id_file'])) {
+            echo json_encode(["status" => "error", "message" => "student_id_file is required"]);
+            return;
+        }
+
+        $file = $_FILES['student_id_file'];
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            echo json_encode(["status" => "error", "message" => "Upload failed"]);
+            return;
+        }
+
+        $allowedMime = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'application/pdf' => 'pdf'
+        ];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!isset($allowedMime[$mime])) {
+            echo json_encode(["status" => "error", "message" => "Only JPG, PNG, and PDF files are allowed"]);
+            return;
+        }
+
+        if ($file['size'] > 5 * 1024 * 1024) {
+            echo json_encode(["status" => "error", "message" => "File must be 5MB or smaller"]);
+            return;
+        }
+
+        $uploadDir = __DIR__ . "/../uploads/student_ids";
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $safeFileName = "student_" . $user->id . "_" . time() . "." . $allowedMime[$mime];
+        $target = $uploadDir . "/" . $safeFileName;
+
+        if (!move_uploaded_file($file['tmp_name'], $target)) {
+            echo json_encode(["status" => "error", "message" => "Unable to save uploaded file"]);
+            return;
+        }
+
+        $relativePath = "uploads/student_ids/" . $safeFileName;
+        $stmt = $this->conn->prepare("
+            UPDATE users
+            SET user_type = 'student', is_student = 1, student_id_file = ?, student_verified = 0, student_verification_status = 'pending'
+            WHERE id = ?
+        ");
+        $stmt->execute([$relativePath, $user->id]);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Student ID uploaded. Verification is pending admin review.",
+            "data" => [
+                "student_id_file" => $relativePath,
+                "student_verification_status" => "pending"
+            ]
+        ]);
     }
 }

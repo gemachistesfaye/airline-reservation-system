@@ -83,9 +83,18 @@ class BookingController {
             $final_base = $base_price * $multipliers[$seat_class];
             
             $discount = 0.00;
-            // Student Discount: 20%
-            if ($user->user_type === 'student') {
+            $student_status = "not_student";
+            $studentStmt = $this->conn->prepare("SELECT is_student, student_verified, student_verification_status FROM users WHERE id = ?");
+            $studentStmt->execute([$user->id]);
+            $studentData = $studentStmt->fetch(PDO::FETCH_ASSOC);
+            $isStudent = (int)($studentData['is_student'] ?? 0) === 1;
+            $studentVerified = (int)($studentData['student_verified'] ?? 0) === 1;
+            $verificationStatus = $studentData['student_verification_status'] ?? 'none';
+            if ($isStudent && $studentVerified) {
                 $discount = $final_base * 0.20;
+                $student_status = "verified";
+            } elseif ($isStudent) {
+                $student_status = $verificationStatus === 'rejected' ? 'rejected' : 'pending';
             }
             $total_price = $final_base - $discount;
 
@@ -136,7 +145,13 @@ class BookingController {
                 "message" => "Booking created! Please check your email for the payment link.",
                 "booking_id" => $booking_id,
                 "total_price" => $total_price,
-                "discount_applied" => ($discount > 0)
+                "discount_applied" => ($discount > 0),
+                "pricing" => [
+                    "original_price" => round($final_base, 2),
+                    "discount_amount" => round($discount, 2),
+                    "final_price" => round($total_price, 2)
+                ],
+                "student_status" => $student_status
             ]);
 
         } catch (Exception $e) {
@@ -171,8 +186,14 @@ class BookingController {
         }
 
         $check = $this->conn->prepare("
-            SELECT flight_id, seat_number, seat_class FROM bookings
-            WHERE booking_id = ? AND user_id = ? AND status != 'Cancelled'
+            SELECT
+                b.flight_id,
+                b.seat_number,
+                b.seat_class,
+                s.class AS seat_table_class
+            FROM bookings b
+            LEFT JOIN seats s ON s.flight_id = b.flight_id AND TRIM(UPPER(s.seat_number)) = TRIM(UPPER(b.seat_number))
+            WHERE b.booking_id = ? AND b.user_id = ? AND b.status != 'Cancelled'
         ");
         $check->execute([$booking_id, $user->id]);
         $booking = $check->fetch(PDO::FETCH_ASSOC);
@@ -183,23 +204,38 @@ class BookingController {
         }
 
         $classMap = [
+            'Economy' => 'economy_seats_avail',
             'Economy Class' => 'economy_seats_avail',
+            'Business' => 'business_seats_avail',
             'Business Class' => 'business_seats_avail',
             'First Class' => 'first_class_seats_avail'
         ];
-        $availCol = $classMap[$booking['seat_class']];
+        $seatClass = trim((string)($booking['seat_class'] ?? ''));
+        if ($seatClass === '') {
+            $seatClass = trim((string)($booking['seat_table_class'] ?? ''));
+        }
+        $availCol = $classMap[$seatClass] ?? null;
 
         $this->conn->beginTransaction();
         try {
             $this->conn->prepare("UPDATE bookings SET status = 'Cancelled' WHERE booking_id = ?")->execute([$booking_id]);
-            $this->conn->prepare("UPDATE flights SET $availCol = $availCol + 1, available_seats = available_seats + 1 WHERE flight_id = ?")->execute([$booking['flight_id']]);
-            $this->conn->prepare("UPDATE seats SET availability_status = 'available' WHERE flight_id = ? AND seat_number = ?")->execute([$booking['flight_id'], $booking['seat_number']]);
+            if ($availCol) {
+                $this->conn->prepare("UPDATE flights SET $availCol = $availCol + 1, available_seats = available_seats + 1 WHERE flight_id = ?")->execute([$booking['flight_id']]);
+            } else {
+                // Fallback for legacy/dirty rows with missing class value.
+                $this->conn->prepare("UPDATE flights SET available_seats = available_seats + 1 WHERE flight_id = ?")->execute([$booking['flight_id']]);
+            }
+            $this->conn->prepare("UPDATE seats SET availability_status = 'available' WHERE flight_id = ? AND TRIM(UPPER(seat_number)) = TRIM(UPPER(?))")->execute([$booking['flight_id'], $booking['seat_number']]);
 
             $this->conn->commit();
-            echo json_encode(["status" => "success", "message" => "Booking cancelled"]);
+            if ($availCol) {
+                echo json_encode(["status" => "success", "message" => "Booking cancelled"]);
+            } else {
+                echo json_encode(["status" => "success", "message" => "Booking cancelled (seat class was missing, class counter skipped)"]);
+            }
         } catch (Exception $e) {
             $this->conn->rollBack();
-            echo json_encode(["status" => "error", "message" => "Cancellation failed"]);
+            echo json_encode(["status" => "error", "message" => "Cancellation failed: " . $e->getMessage()]);
         }
     }
 }

@@ -1,4 +1,6 @@
-const BASE_URL = "http://localhost:8080";
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost/airline-reservation-system/backend";
 
 const getToken = () => localStorage.getItem("token");
 
@@ -27,6 +29,13 @@ const getHeaders = (auth = true) => {
   return headers;
 };
 
+const getAuthHeadersOnly = () => {
+  const headers = {};
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+};
+
 // --- AUTH ---
 export const registerUser = (data) => 
   fetch(`${BASE_URL}/register`, { method: "POST", headers: getHeaders(false), body: JSON.stringify(data) }).then(handleResponse);
@@ -50,6 +59,16 @@ export const getUserProfile = () =>
 export const updateUserProfile = (data) => 
   fetch(`${BASE_URL}/profile`, { method: "POST", headers: getHeaders(true), body: JSON.stringify(data) }).then(handleResponse);
 
+export const uploadStudentId = (file) => {
+  const body = new FormData();
+  body.append("student_id_file", file);
+  return fetch(`${BASE_URL}/profile/student-id`, {
+    method: "POST",
+    headers: getAuthHeadersOnly(),
+    body
+  }).then(handleResponse);
+};
+
 // --- FLIGHTS ---
 export const getFlights = (params = {}) => {
   const query = new URLSearchParams(params).toString();
@@ -72,6 +91,9 @@ export const getUserBookings = () =>
 
 export const cancelBooking = (bookingId) => 
   fetch(`${BASE_URL}/cancel-booking/${bookingId}`, { method: "DELETE", headers: getHeaders(true) }).then(handleResponse);
+
+export const processPayment = (bookingId) =>
+  fetch(`${BASE_URL}/process-payment/${bookingId}`, { method: "POST", headers: getHeaders(false) }).then(handleResponse);
 
 // --- ADMIN ---
 export const adminGetStats = () => 
@@ -97,3 +119,13 @@ export const adminGetUsers = () =>
 
 export const adminToggleUserStatus = (userId) => 
   fetch(`${BASE_URL}/admin/users/toggle`, { method: "POST", headers: getHeaders(true), body: JSON.stringify({ id: userId }) }).then(handleResponse);
+
+export const adminGetStudentVerifications = () =>
+  fetch(`${BASE_URL}/admin/student-verifications`, { headers: getHeaders(true) }).then(handleResponse);
+
+export const adminReviewStudentVerification = (userId, action) =>
+  fetch(`${BASE_URL}/admin/student-verifications/${userId}`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify({ action })
+  }).then(handleResponse);

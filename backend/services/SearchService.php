@@ -90,9 +90,10 @@ class SearchService {
         $offset = ($page - 1) * $limit;
 
         // Get total count for pagination metadata
-        $countStmt = $this->conn->prepare($query);
+        $countQuery = "SELECT COUNT(*) as total FROM (" . $query . ") as filtered_flights";
+        $countStmt = $this->conn->prepare($countQuery);
         $countStmt->execute($params);
-        $totalItems = $countStmt->rowCount();
+        $totalItems = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
         // Final Query with Sorting and Pagination
         $query .= " ORDER BY $sort LIMIT $limit OFFSET $offset";

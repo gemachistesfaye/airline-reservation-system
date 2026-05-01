@@ -2,7 +2,7 @@ import { useState } from "react";
 import { resetPassword } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion } from "framer-motion";
-import { ShieldCheck, ArrowRight, Lock } from "lucide-react";
+import { ShieldCheck, ArrowRight, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function ResetPassword() {
@@ -13,10 +13,13 @@ export default function ResetPassword() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (password.length < 8) return showToast("Password must be at least 8 characters.", "error");
     if (password !== confirmPassword) return showToast("Passwords do not match", "error");
     
     setLoading(true);
@@ -31,7 +34,15 @@ export default function ResetPassword() {
     }
   };
 
-  if (!token) return <div className="min-h-screen flex items-center justify-center text-red-500 font-bold">Invalid Reset Token</div>;
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="bg-red-50 text-red-600 border border-red-100 rounded-2xl px-6 py-4 font-bold">
+          Invalid or missing reset token.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 pt-32">
@@ -45,13 +56,20 @@ export default function ResetPassword() {
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
-                type="password" 
-                className="input-premium bg-gray-50 pl-12" 
+                type={showPassword ? "text" : "password"}
+                className="input-premium bg-gray-50 pl-12 pr-12" 
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 
                 required 
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-primary-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -60,13 +78,20 @@ export default function ResetPassword() {
             <div className="relative">
               <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
-                type="password" 
-                className="input-premium bg-gray-50 pl-12" 
+                type={showConfirmPassword ? "text" : "password"}
+                className="input-premium bg-gray-50 pl-12 pr-12" 
                 value={confirmPassword} 
                 onChange={e => setConfirmPassword(e.target.value)} 
                 required 
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-primary-600 transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 

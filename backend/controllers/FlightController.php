@@ -16,6 +16,11 @@ class FlightController {
             'origin' => $_GET['origin'] ?? null,
             'destination' => $_GET['destination'] ?? null,
             'date' => $_GET['date'] ?? null,
+            'min_price' => $_GET['min_price'] ?? null,
+            'max_price' => $_GET['max_price'] ?? null,
+            'seat_class' => $_GET['seat_class'] ?? null,
+            'departure_time_slot' => $_GET['departure_time_slot'] ?? null,
+            'sort_by' => $_GET['sort_by'] ?? null,
             'status' => $_GET['status'] ?? null,
             'page' => $_GET['page'] ?? 1,
             'limit' => $_GET['limit'] ?? 10

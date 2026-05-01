@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Plane, User, LayoutDashboard, LogOut, Home, Compass, Users, Settings } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -14,6 +15,18 @@ export default function Navbar() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAuth = !!localStorage.getItem("token");
   const role = user.role || 'user';
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
 
   const isActive = (path) => location.pathname === path;
 
@@ -69,12 +82,37 @@ export default function Navbar() {
                 </>
               )}
 
-              <button
-                onClick={logout}
-                className="bg-gray-900 text-white hover:bg-black px-5 py-2.5 rounded-xl shadow-xl shadow-gray-200 transition-all active:scale-95 flex items-center gap-2 ml-4"
-              >
-                <LogOut size={16} /> Logout
-              </button>
+              <div className="relative ml-4" ref={profileRef}>
+                <button
+                  onClick={() => setProfileOpen((prev) => !prev)}
+                  className="bg-gray-900 text-white hover:bg-black px-4 py-2 rounded-xl shadow-xl shadow-gray-200 transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-xs font-black">
+                    {String(user.name || "U").charAt(0).toUpperCase()}
+                  </span>
+                  <span className="font-black text-[11px] normal-case">{user.name || "Profile"}</span>
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 mt-3 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-2xl shadow-blue-900/10">
+                    <div className="pb-3 border-b border-gray-100">
+                      <div className="font-black text-gray-900">{user.name}</div>
+                      <div className="text-xs text-gray-500">{user.email}</div>
+                      <span className="inline-flex mt-2 rounded-full bg-primary-50 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-primary-700">
+                        {role}
+                      </span>
+                    </div>
+                    <button onClick={() => { setProfileOpen(false); navigate("/profile"); }} className="w-full text-left mt-3 px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                      Profile
+                    </button>
+                    <button onClick={() => { setProfileOpen(false); navigate("/dashboard"); }} className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                      My Trips
+                    </button>
+                    <button onClick={logout} className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50">
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

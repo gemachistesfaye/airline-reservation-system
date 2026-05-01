@@ -2,7 +2,7 @@ import { useState } from "react";
 import { forgotPassword } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion } from "framer-motion";
-import { Mail, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function ForgotPassword() {
@@ -14,9 +14,13 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await forgotPassword({ email });
+      const res = await forgotPassword({ email: email.trim() });
       showToast(res.message);
       setSent(true);
     } catch (err) {
@@ -46,8 +50,11 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 pt-32">
       <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-blue-900/10 border border-gray-100 max-w-lg w-full">
+        <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mb-6">
+          <ShieldCheck size={22} />
+        </div>
         <h2 className="text-3xl font-black text-gray-900 mb-2">Recover Access</h2>
-        <p className="text-gray-500 mb-10">Enter your email and we'll send you a link to reset your password.</p>
+        <p className="text-gray-500 mb-10">Enter your email and we will send a secure link to reset your password.</p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
