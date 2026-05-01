@@ -99,7 +99,6 @@ class AdminController {
 
         $flightId = $this->conn->lastInsertId();
         
-        // Auto-generate seat map
         $this->generateSeats($flightId, $data->economy_seats, $data->business_seats, $data->first_class_seats);
 
         $this->sendJSON(["status" => "success", "message" => "Flight added successfully"]);
@@ -109,7 +108,6 @@ class AdminController {
         $rows = ['A', 'B', 'C', 'D', 'E', 'F'];
         $currentRow = 1;
 
-        // First Class (2 seats per row)
         for ($i = 0; $i < ceil($first/2); $i++) {
             foreach (['A', 'F'] as $l) {
                 if ($first-- > 0) $this->addSeat($flightId, $l . $currentRow, 'First Class');
@@ -117,7 +115,6 @@ class AdminController {
             $currentRow++;
         }
 
-        // Business Class (4 seats per row)
         for ($i = 0; $i < ceil($bus/4); $i++) {
             foreach (['A', 'C', 'D', 'F'] as $l) {
                 if ($bus-- > 0) $this->addSeat($flightId, $l . $currentRow, 'Business Class');
@@ -125,7 +122,6 @@ class AdminController {
             $currentRow++;
         }
 
-        // Economy Class (6 seats per row)
         for ($i = 0; $i < ceil($eco/6); $i++) {
             foreach ($rows as $l) {
                 if ($eco-- > 0) $this->addSeat($flightId, $l . $currentRow, 'Economy Class');
@@ -154,8 +150,43 @@ class AdminController {
     // --- USER MANAGEMENT ---
     public function getUsers() {
         $this->auth->requireAdmin();
-        $stmt = $this->conn->query("SELECT id, name, email, role, user_type, is_verified, created_at FROM users WHERE role != 'admin'");
+        $stmt = $this->conn->query("
+            SELECT id, name, email, role, user_type, is_verified, status, passport_file, student_id_file, created_at 
+            FROM users 
+            WHERE role != 'admin'
+        ");
         $this->sendJSON(["status" => "success", "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    }
+
+    public function toggleUserStatus() {
+        $this->auth->requireAdmin();
+        $data = json_decode(file_get_contents("php://input"));
+        $userId = $data->id ?? null;
+
+        if (!$userId) $this->sendJSON(["status" => "error", "message" => "User ID required"], 400);
+
+        $stmt = $this->conn->prepare("SELECT status FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $current = $stmt->fetchColumn();
+
+        $newStatus = ($current === 'active') ? 'restricted' : 'active';
+        $stmt = $this->conn->prepare("UPDATE users SET status = ? WHERE id = ?");
+        $stmt->execute([$newStatus, $userId]);
+
+        $this->sendJSON(["status" => "success", "message" => "User status updated to $newStatus"]);
+    }
+
+    public function deleteUser() {
+        $this->auth->requireAdmin();
+        $data = json_decode(file_get_contents("php://input"));
+        $userId = $data->id ?? null;
+
+        if (!$userId) $this->sendJSON(["status" => "error", "message" => "User ID required"], 400);
+
+        $stmt = $this->conn->prepare("DELETE FROM users WHERE id = ? AND role != 'admin'");
+        $stmt->execute([$userId]);
+
+        $this->sendJSON(["status" => "success", "message" => "User deleted successfully"]);
     }
 
     public function getAllBookings() {

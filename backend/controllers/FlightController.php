@@ -106,8 +106,9 @@ class FlightController {
             $this->conn->commit();
 
             echo json_encode([
+                "success" => true,
                 "status" => "success",
-                "message" => "Flight " . $data->flight_number . " established with $fst First, $bus Business, and $eco Economy seats."
+                "message" => "Flight added successfully"
             ]);
         } catch (Exception $e) {
             $this->conn->rollBack();

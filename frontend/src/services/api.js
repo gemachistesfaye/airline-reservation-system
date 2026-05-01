@@ -6,18 +6,23 @@ const getToken = () => localStorage.getItem("token");
 
 const handleResponse = async (res) => {
   const contentType = res.headers.get("content-type");
-  
+  const text = await res.text();
+
   if (!contentType || !contentType.includes("application/json")) {
-    const text = await res.text();
-    console.error("Invalid response format:", text);
-    throw new Error("Server returned invalid format (not JSON). Check console.");
+    console.error("Non-JSON Response:", text);
+    throw new Error("Server returned invalid format. Check console.");
   }
 
-  const data = await res.json();
-  if (!res.ok || data.status === "error") {
-    throw new Error(data.message || "Something went wrong");
+  try {
+    const data = JSON.parse(text);
+    if (!res.ok || data.status === "error") {
+      throw new Error(data.message || "Something went wrong");
+    }
+    return data;
+  } catch (err) {
+    console.error("JSON Parse Error. Raw Body:", text);
+    throw new Error("Server returned corrupted JSON. Check console for details.");
   }
-  return data;
 };
 
 const getHeaders = (auth = true) => {
@@ -77,7 +82,7 @@ export const uploadStudentId = (file) => {
 
 // --- FLIGHTS ---
 export const getFlights = (params = {}) => {
-  const query = new URLSearchParams(params).toString();
+  const query = new URLSearchParams({ ...params, _t: Date.now() }).toString();
   return fetch(`${BASE_URL}/flights?${query}`, { headers: getHeaders(true) }).then(handleResponse);
 };
 
@@ -125,6 +130,9 @@ export const adminGetUsers = () =>
 
 export const adminToggleUserStatus = (userId) => 
   fetch(`${BASE_URL}/admin/users/toggle`, { method: "POST", headers: getHeaders(true), body: JSON.stringify({ id: userId }) }).then(handleResponse);
+
+export const adminDeleteUser = (userId) => 
+  fetch(`${BASE_URL}/admin/users/delete`, { method: "DELETE", headers: getHeaders(true), body: JSON.stringify({ id: userId }) }).then(handleResponse);
 
 export const adminGetStudentVerifications = () =>
   fetch(`${BASE_URL}/admin/student-verifications`, { headers: getHeaders(true) }).then(handleResponse);

@@ -72,7 +72,7 @@ class SearchService {
         }
 
         // --- SORTING ---
-        $sort = "departure_time ASC"; // Default
+        $sort = "flight_id DESC"; // Default for real-time visibility of new flights
         if (!empty($filters['sort_by'])) {
             switch ($filters['sort_by']) {
                 case 'cheapest':

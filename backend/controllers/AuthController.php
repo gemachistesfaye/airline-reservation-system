@@ -107,8 +107,8 @@ class AuthController {
 
             $this->emailService->sendVerificationEmail($email, $token, $name);
             $this->sendJSON(["status" => "success", "message" => "Registration successful! Please check your email for verification link."]);
-        } catch (Exception $e) {
-            $this->sendJSON(["status" => "error", "message" => "Database error during registration."], 500);
+        } catch (Throwable $e) {
+            $this->sendJSON(["status" => "error", "message" => "Server error: " . $e->getMessage()], 500);
         }
     }
 
@@ -221,19 +221,22 @@ class AuthController {
 
     public function verifyEmail() {
         $token = $_GET['token'] ?? null;
-        if (!$token) { echo "Invalid link"; return; }
+        if (!$token) {
+            $this->sendJSON(["status" => "error", "message" => "Verification token missing"], 400);
+        }
 
         $stmt = $this->conn->prepare("SELECT id FROM users WHERE verification_token = ?");
         $stmt->execute([$token]);
         $user = $stmt->fetch();
 
-        if (!$user) { echo "Verification failed: link expired or invalid."; return; }
+        if (!$user) {
+            $this->sendJSON(["status" => "error", "message" => "Verification failed: link expired or invalid."], 400);
+        }
 
         $stmt = $this->conn->prepare("UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = ?");
         $stmt->execute([$user['id']]);
 
-        header("Location: " . BASE_URL_FRONTEND . "/login?verified=true");
-        exit;
+        $this->sendJSON(["status" => "success", "message" => "Email verified successfully! You can now log in."]);
     }
 
     // =====================

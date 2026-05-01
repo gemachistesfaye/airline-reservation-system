@@ -45,7 +45,8 @@ export default function Register() {
         showToast(result.message, "error");
       }
     } catch (err) {
-      showToast("Connection failed", "error");
+      console.error("Full Error Object:", err);
+      showToast(`Connection failed: ${err.message}. Check if your XAMPP Apache is running at http://localhost`, "error");
     } finally {
       setLoading(false);
     }

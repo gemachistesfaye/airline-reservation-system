@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 import Payment from "./pages/Payment";
+import VerifyEmail from "./pages/VerifyEmail";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { ToastProvider } from "./components/Toast";
@@ -50,6 +51,7 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route

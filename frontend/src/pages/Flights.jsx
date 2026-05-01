@@ -22,24 +22,30 @@ export default function Flights() {
     seat_class: searchParams.get('seat_class') || "",
     departure_time_slot: searchParams.get('departure_time_slot') || "",
     sort_by: searchParams.get('sort_by') || "departure_time",
-    status: "Scheduled"
   });
 
-  const fetchFlightsData = async () => {
-    setLoading(true);
+  const fetchFlightsData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const res = await getFlights(filters);
       setFlights(res.data);
     } catch (err) {
-      showToast(err.message, 'error');
+      if (!isBackground) showToast(err.message, 'error');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchFlightsData();
-  }, [location.search]);
+
+    // AUTO REFRESH every 5 seconds to sync with admin updates
+    const interval = setInterval(() => {
+      fetchFlightsData(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [location.search, JSON.stringify(filters)]);
 
   const handleSearch = (e) => {
     if (e) e.preventDefault();

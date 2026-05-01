@@ -34,7 +34,7 @@ if ($route === "/profile" && $method === "GET") (new AuthController($conn))->get
 if ($route === "/profile" && $method === "POST") (new AuthController($conn))->updateUserProfile();
 
 // Flights
-if ($route === "/flights" && $method === "GET") (new FlightController($conn))->getAllFlights();
+if (($route === "/flights" || $route === "/get-flights") && $method === "GET") (new FlightController($conn))->getAllFlights();
 if (preg_match('/^\/flights\/(\d+)$/', $route, $m) && $method === "GET") (new FlightController($conn))->getFlight($m[1]);
 
 // Seats
@@ -50,6 +50,8 @@ if (preg_match('/^\/process-payment\/(\d+)$/', $route, $m) && $method === "POST"
 if ($route === "/admin/stats" && $method === "GET") (new AdminController($conn))->getStats();
 if ($route === "/admin/bookings" && $method === "GET") (new AdminController($conn))->getAllBookings();
 if ($route === "/admin/users" && $method === "GET") (new AdminController($conn))->getUsers();
+if ($route === "/admin/users/toggle" && $method === "POST") (new AdminController($conn))->toggleUserStatus();
+if ($route === "/admin/users/delete" && $method === "DELETE") (new AdminController($conn))->deleteUser();
 if ($route === "/admin/student-verifications" && $method === "GET") (new AdminController($conn))->getStudentVerifications();
 if (preg_match('/^\/admin\/student-verifications\/(\d+)$/', $route, $m) && $method === "POST") (new AdminController($conn))->reviewStudentVerification($m[1]);
 if ($route === "/admin/flights" && $method === "POST") (new AdminController($conn))->addFlight();
