@@ -35,4 +35,5 @@ try {
         "message" => "Critical Server Error",
         "details" => $e->getMessage()
     ]);
+    exit;
 }

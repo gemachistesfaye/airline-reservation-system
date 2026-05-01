@@ -8,6 +8,14 @@ class FlightController {
         $this->conn = $conn;
     }
 
+    private function sendJSON($data, $statusCode = 200) {
+        header('Content-Type: application/json');
+        http_response_code($statusCode);
+        if (ob_get_length()) ob_clean();
+        echo json_encode($data);
+        exit;
+    }
+
     public function getAllFlights() {
         require_once __DIR__ . "/../services/SearchService.php";
         $search = new SearchService($this->conn);
@@ -28,7 +36,7 @@ class FlightController {
 
         $results = $search->searchFlights($filters);
 
-        echo json_encode([
+        $this->sendJSON([
             "status" => "success",
             "data" => $results['items'],
             "meta" => $results['meta']
@@ -39,8 +47,7 @@ class FlightController {
         $flight_id = $id ?? $_GET['flight_id'] ?? null;
 
         if (!$flight_id) {
-            echo json_encode(["status" => "error", "message" => "Flight ID required"]);
-            return;
+            $this->sendJSON(["status" => "error", "message" => "Flight ID required"], 400);
         }
 
         $stmt = $this->conn->prepare("SELECT * FROM flights WHERE flight_id = ?");
@@ -48,11 +55,10 @@ class FlightController {
         $flight = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$flight) {
-            echo json_encode(["status" => "error", "message" => "Flight not found"]);
-            return;
+            $this->sendJSON(["status" => "error", "message" => "Flight not found"], 404);
         }
 
-        echo json_encode(["status" => "success", "data" => $flight]);
+        $this->sendJSON(["status" => "success", "data" => $flight]);
     }
 
     public function createFlight() {
@@ -66,8 +72,7 @@ class FlightController {
         $total = $eco + $bus + $fst;
 
         if (empty($data->flight_number) || empty($data->origin) || empty($data->destination)) {
-            echo json_encode(["status" => "error", "message" => "Missing required fields"]);
-            return;
+            $this->sendJSON(["status" => "error", "message" => "Missing required fields"], 400);
         }
 
         try {
@@ -105,14 +110,14 @@ class FlightController {
 
             $this->conn->commit();
 
-            echo json_encode([
+            $this->sendJSON([
                 "success" => true,
                 "status" => "success",
                 "message" => "Flight added successfully"
             ]);
         } catch (Exception $e) {
-            $this->conn->rollBack();
-            echo json_encode(["status" => "error", "message" => "Failed to create flight: " . $e->getMessage()]);
+            if ($this->conn->inTransaction()) $this->conn->rollBack();
+            $this->sendJSON(["status" => "error", "message" => "Failed to create flight: " . $e->getMessage()], 500);
         }
     }
 
@@ -143,9 +148,9 @@ class FlightController {
         ]);
 
         if ($success) {
-            echo json_encode(["status" => "success", "message" => "Flight updated successfully"]);
+            $this->sendJSON(["status" => "success", "message" => "Flight updated successfully"]);
         } else {
-            echo json_encode(["status" => "error", "message" => "Failed to update flight"]);
+            $this->sendJSON(["status" => "error", "message" => "Failed to update flight"], 500);
         }
     }
 
