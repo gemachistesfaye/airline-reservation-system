@@ -51,9 +51,11 @@ export default function Navbar() {
             <Link to="/" className={`flex items-center gap-2 hover:text-primary-600 transition-colors ${isActive('/') ? 'text-primary-600' : ''}`}>
               <Home size={16} /> Home
             </Link>
-            <Link to="/flights" className={`flex items-center gap-2 hover:text-primary-600 transition-colors ${isActive('/flights') ? 'text-primary-600' : ''}`}>
-              <Compass size={16} /> Flights
-            </Link>
+            {role !== 'admin' && (
+              <Link to="/flights" className={`flex items-center gap-2 hover:text-primary-600 transition-colors ${isActive('/flights') ? 'text-primary-600' : ''}`}>
+                <Compass size={16} /> Flights
+              </Link>
+            )}
           </div>
 
           {!isAuth ? (
@@ -111,9 +113,11 @@ export default function Navbar() {
                         <button onClick={() => { setProfileOpen(false); navigate("/profile"); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black text-gray-600 hover:bg-gray-50 hover:text-primary-600 transition-all">
                           <User size={16} /> Profile Settings
                         </button>
-                        <button onClick={() => { setProfileOpen(false); navigate("/dashboard"); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black text-gray-600 hover:bg-gray-50 hover:text-primary-600 transition-all">
-                          <Ticket size={16} /> My Reservations
-                        </button>
+                        {role !== 'admin' && (
+                          <button onClick={() => { setProfileOpen(false); navigate("/dashboard"); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black text-gray-600 hover:bg-gray-50 hover:text-primary-600 transition-all">
+                            <Ticket size={16} /> My Reservations
+                          </button>
+                        )}
                         {role === 'admin' && (
                           <button onClick={() => { setProfileOpen(false); navigate("/admin"); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black text-gray-600 hover:bg-gray-50 hover:text-primary-600 transition-all">
                             <LayoutDashboard size={16} /> Control Panel

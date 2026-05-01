@@ -10,62 +10,40 @@ class AuthMiddleware {
         $this->jwt = new JWTHandler();
     }
 
-    /**
-     * General Verification (Any logged in user)
-     */
+    private function sendJSON($data, $statusCode = 401) {
+        header('Content-Type: application/json');
+        http_response_code($statusCode);
+        ob_clean();
+        echo json_encode($data);
+        exit;
+    }
+
     public function verify() {
         $token = $this->getBearerToken();
-
-        if (!$token) {
-            http_response_code(401);
-            echo json_encode(["status" => "error", "message" => "Unauthorized: Token required"]);
-            exit;
-        }
+        if (!$token) $this->sendJSON(["status" => "error", "message" => "Token required"], 401);
 
         $decoded = $this->jwt->verifyToken($token);
-
-        if (!$decoded) {
-            http_response_code(401);
-            echo json_encode(["status" => "error", "message" => "Unauthorized: Invalid or expired token"]);
-            exit;
-        }
+        if (!$decoded) $this->sendJSON(["status" => "error", "message" => "Invalid or expired token"], 401);
 
         return $decoded->user;
     }
 
-    /**
-     * Strict ADMIN Enforcement
-     */
     public function requireAdmin() {
         $user = $this->verify();
-        if ($user->role !== 'admin') {
-            http_response_code(403);
-            echo json_encode(["status" => "error", "message" => "Access Forbidden: Admins only"]);
-            exit;
-        }
+        if ($user->role !== 'admin') $this->sendJSON(["status" => "error", "message" => "Access Forbidden: Admins only"], 403);
         return $user;
     }
 
-    /**
-     * Strict PASSENGER (User) Enforcement
-     */
     public function requireUser() {
         $user = $this->verify();
-        if ($user->role !== 'user') {
-            http_response_code(403);
-            echo json_encode(["status" => "error", "message" => "Access Forbidden: Passengers only"]);
-            exit;
-        }
+        if ($user->role !== 'user') $this->sendJSON(["status" => "error", "message" => "Access Forbidden: Passengers only"], 403);
         return $user;
     }
 
     private function getBearerToken() {
         $headers = getallheaders();
-        $authHeader = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null;
-
-        if ($authHeader && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            return $matches[1];
-        }
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null;
+        if ($authHeader && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) return $matches[1];
         return null;
     }
 }

@@ -37,8 +37,14 @@ const getAuthHeadersOnly = () => {
 };
 
 // --- AUTH ---
-export const registerUser = (data) => 
-  fetch(`${BASE_URL}/register`, { method: "POST", headers: getHeaders(false), body: JSON.stringify(data) }).then(handleResponse);
+export const registerUser = (data) => {
+  const isFormData = data instanceof FormData;
+  return fetch(`${BASE_URL}/register`, { 
+    method: "POST", 
+    headers: isFormData ? getAuthHeadersOnly() : getHeaders(false), 
+    body: isFormData ? data : JSON.stringify(data) 
+  }).then(handleResponse);
+};
 
 export const loginUser = (data) => 
   fetch(`${BASE_URL}/login`, { method: "POST", headers: getHeaders(false), body: JSON.stringify(data) }).then(handleResponse);

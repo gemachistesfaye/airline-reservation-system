@@ -8,16 +8,19 @@ class SeatController {
         $this->conn = $conn;
     }
 
-    // =========================
-    // GET SEATS BY FLIGHT
-    // =========================
-    public function getSeatsByFlight() {
+    private function sendJSON($data, $statusCode = 200) {
+        header('Content-Type: application/json');
+        http_response_code($statusCode);
+        ob_clean();
+        echo json_encode($data);
+        exit;
+    }
 
+    public function getSeatsByFlight() {
         $flight_id = $_GET['flight_id'] ?? null;
 
         if (!$flight_id) {
-            echo json_encode(["status" => "error", "message" => "flight_id required"]);
-            return;
+            $this->sendJSON(["status" => "error", "message" => "flight_id required"], 400);
         }
 
         $stmt = $this->conn->prepare("
@@ -41,7 +44,7 @@ class SeatController {
             }
         }
 
-        echo json_encode([
+        $this->sendJSON([
             "status" => "success",
             "data" => $seats,
             "class_seat_counts" => $counts

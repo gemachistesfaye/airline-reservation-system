@@ -12,7 +12,14 @@ class Database {
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             return $conn;
         } catch (PDOException $e) {
-            die("Connection failed: " . $e->getMessage());
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                "status" => "error",
+                "message" => "Database connection failed",
+                "details" => $e->getMessage()
+            ]);
+            exit;
         }
     }
 }

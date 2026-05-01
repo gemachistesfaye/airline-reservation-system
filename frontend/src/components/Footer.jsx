@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Plane, Facebook, Twitter, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import { Plane, Mail, MapPin, Phone, Globe } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -21,7 +21,7 @@ export default function Footer() {
               Redefining the gold standard of air travel through innovative digital experiences and bespoke sky-service.
             </p>
             <div className="flex gap-4">
-               {[Facebook, Twitter, Instagram, Linkedin].map((Icon, i) => (
+               {[Globe, Globe, Globe, Globe].map((Icon, i) => (
                  <a key={i} href="#" className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all active:scale-90">
                     <Icon size={18} />
                  </a>

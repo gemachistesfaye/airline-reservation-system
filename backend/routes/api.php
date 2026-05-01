@@ -4,6 +4,9 @@ require_once "config/Database.php";
 require_once "controllers/AuthController.php";
 require_once "controllers/FlightController.php";
 require_once "controllers/BookingController.php";
+require_once "controllers/AdminController.php";
+require_once "controllers/PaymentController.php";
+require_once "controllers/SeatController.php";
 
 $db = new Database();
 $conn = $db->connect();
@@ -15,170 +18,43 @@ $base = "/airline-reservation-system/backend";
 $route = str_replace($base, "", $uri);
 
 // =========================
-// AUTH ROUTES
+// ROUTING LOGIC
 // =========================
-if ($route === "/register" && $method === "POST") {
-    (new AuthController($conn))->register();
-    exit;
-}
 
-if ($route === "/login" && $method === "POST") {
-    (new AuthController($conn))->login();
-    exit;
-}
+// Auth
+if ($route === "/register" && $method === "POST") (new AuthController($conn))->register();
+if ($route === "/login" && $method === "POST") (new AuthController($conn))->login();
+if ($route === "/verify-email" && $method === "GET") (new AuthController($conn))->verifyEmail();
+if ($route === "/forgot-password" && $method === "POST") (new AuthController($conn))->forgotPassword();
+if ($route === "/reset-password" && $method === "POST") (new AuthController($conn))->resetPassword();
+if ($route === "/change-password" && $method === "POST") (new AuthController($conn))->changePassword();
 
-if ($route === "/verify-email" && $method === "GET") {
-    (new AuthController($conn))->verifyEmail();
-    exit;
-}
+// Profile
+if ($route === "/profile" && $method === "GET") (new AuthController($conn))->getUserProfile();
+if ($route === "/profile" && $method === "POST") (new AuthController($conn))->updateUserProfile();
 
-if ($route === "/forgot-password" && $method === "POST") {
-    (new AuthController($conn))->forgotPassword();
-    exit;
-}
+// Flights
+if ($route === "/flights" && $method === "GET") (new FlightController($conn))->getAllFlights();
+if (preg_match('/^\/flights\/(\d+)$/', $route, $m) && $method === "GET") (new FlightController($conn))->getFlight($m[1]);
 
-if ($route === "/reset-password" && $method === "POST") {
-    (new AuthController($conn))->resetPassword();
-    exit;
-}
+// Seats
+if ($route === "/seats" && $method === "GET") (new SeatController($conn))->getSeatsByFlight();
 
-if ($route === "/change-password" && $method === "POST") {
-    (new AuthController($conn))->changePassword();
-    exit;
-}
+// Bookings
+if ($route === "/book" && $method === "POST") (new BookingController($conn))->bookFlight();
+if ($route === "/my-bookings" && $method === "GET") (new BookingController($conn))->getBookings();
+if (preg_match('/^\/cancel-booking\/(\d+)$/', $route, $m) && $method === "DELETE") (new BookingController($conn))->cancelBooking($m[1]);
+if (preg_match('/^\/process-payment\/(\d+)$/', $route, $m) && $method === "POST") (new PaymentController($conn))->processPayment($m[1]);
 
-// =========================
-// PROFILE ROUTES
-// =========================
-if ($route === "/profile" && $method === "GET") {
-    (new AuthController($conn))->getUserProfile();
-    exit;
-}
+// Admin
+if ($route === "/admin/stats" && $method === "GET") (new AdminController($conn))->getStats();
+if ($route === "/admin/bookings" && $method === "GET") (new AdminController($conn))->getAllBookings();
+if ($route === "/admin/users" && $method === "GET") (new AdminController($conn))->getUsers();
+if ($route === "/admin/student-verifications" && $method === "GET") (new AdminController($conn))->getStudentVerifications();
+if (preg_match('/^\/admin\/student-verifications\/(\d+)$/', $route, $m) && $method === "POST") (new AdminController($conn))->reviewStudentVerification($m[1]);
+if ($route === "/admin/flights" && $method === "POST") (new AdminController($conn))->addFlight();
+if ($route === "/admin/flights" && $method === "DELETE") (new AdminController($conn))->deleteFlight();
 
-if ($route === "/profile" && $method === "POST") {
-    (new AuthController($conn))->updateUserProfile();
-    exit;
-}
-
-if ($route === "/profile/student-id" && $method === "POST") {
-    (new AuthController($conn))->uploadStudentId();
-    exit;
-}
-
-// =========================
-// FLIGHT ROUTES
-// =========================
-if ($route === "/flights" && $method === "GET") {
-    (new FlightController($conn))->getAllFlights();
-    exit;
-}
-
-if (strpos($route, "/flights/") === 0 && $method === "GET") {
-    $parts = explode("/", $route);
-    $flight_id = end($parts);
-    (new FlightController($conn))->getFlight($flight_id);
-    exit;
-}
-
-if ($route === "/flight" && $method === "GET") {
-    (new FlightController($conn))->getFlight();
-    exit;
-}
-
-// =========================
-// BOOKING ROUTES
-// =========================
-if ($route === "/book" && $method === "POST") {
-    (new BookingController($conn))->bookFlight();
-    exit;
-}
-
-if ($route === "/cancel" && $method === "POST") {
-    (new BookingController($conn))->cancelBooking();
-    exit;
-}
-
-if (strpos($route, "/cancel-booking/") === 0 && $method === "DELETE") {
-    $parts = explode("/", $route);
-    $booking_id = end($parts);
-    (new BookingController($conn))->cancelBooking($booking_id);
-    exit;
-}
-
-if (strpos($route, "/process-payment/") === 0 && $method === "POST") {
-    require_once "controllers/PaymentController.php";
-    $parts = explode("/", $route);
-    $booking_id = end($parts);
-    (new PaymentController($conn))->processPayment($booking_id);
-    exit;
-}
-
-if ($route === "/my-bookings" && $method === "GET") {
-    (new BookingController($conn))->getBookings();
-    exit;
-}
-
-// =========================
-// ADMIN ROUTES
-// =========================
-require_once "controllers/AdminController.php";
-if ($route === "/admin/flights" && $method === "POST") {
-    (new AdminController($conn))->addFlight();
-    exit;
-}
-if (strpos($route, "/admin/flights/") === 0 && $method === "PUT") {
-    $parts = explode("/", $route);
-    $flight_id = end($parts);
-    (new AdminController($conn))->updateFlight($flight_id);
-    exit;
-}
-if ($route === "/admin/flights" && $method === "DELETE") {
-    (new AdminController($conn))->deleteFlight();
-    exit;
-}
-if ($route === "/admin/bookings" && $method === "GET") {
-    (new AdminController($conn))->getAllBookings();
-    exit;
-}
-if ($route === "/admin/stats" && $method === "GET") {
-    (new AdminController($conn))->stats();
-    exit;
-}
-if ($route === "/admin/analytics" && $method === "GET") {
-    (new AdminController($conn))->analytics();
-    exit;
-}
-if ($route === "/admin/users" && $method === "GET") {
-    (new AdminController($conn))->getAllUsers();
-    exit;
-}
-if ($route === "/admin/users/toggle" && $method === "POST") {
-    (new AdminController($conn))->toggleUserStatus();
-    exit;
-}
-if ($route === "/admin/student-verifications" && $method === "GET") {
-    (new AdminController($conn))->getStudentVerificationRequests();
-    exit;
-}
-if (strpos($route, "/admin/student-verifications/") === 0 && $method === "POST") {
-    $parts = explode("/", $route);
-    $user_id = end($parts);
-    (new AdminController($conn))->reviewStudentVerification($user_id);
-    exit;
-}
-
-// =========================
-// SEAT ROUTES
-// =========================
-require_once "controllers/SeatController.php";
-if ($route === "/seats" && $method === "GET") {
-    (new SeatController($conn))->getSeatsByFlight();
-    exit;
-}
-
-// DEFAULT
-echo json_encode([
-    "status" => "error",
-    "message" => "Route not found",
-    "path" => $route
-]);
+// Fallback
+http_response_code(404);
+echo json_encode(["status" => "error", "message" => "Endpoint not found: $route"]);
