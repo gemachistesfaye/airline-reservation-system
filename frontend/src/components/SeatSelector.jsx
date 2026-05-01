@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { User, Armchair } from "lucide-react";
+import { User, Armchair, Crown, Star, X } from "lucide-react";
 
 export default function SeatSelector({ seats, onSelect }) {
   const [selected, setSelected] = useState(null);
@@ -99,20 +99,16 @@ export default function SeatSelector({ seats, onSelect }) {
       {/* Legend */}
       <div className="flex flex-wrap justify-center gap-6 mt-16 p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-blue-900/5">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-amber-500 rounded-lg shadow-lg shadow-amber-500/30 flex items-center justify-center text-white"><Crown size={12}/></div>
-          <span className="text-xs font-bold text-gray-600">Business Class</span>
+          <div className="w-6 h-6 bg-emerald-500 rounded-lg shadow-lg shadow-emerald-500/30 flex items-center justify-center text-white"><Armchair size={12}/></div>
+          <span className="text-xs font-bold text-gray-600">Available</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-green-500 rounded-lg shadow-lg shadow-green-500/30 flex items-center justify-center text-white"><Armchair size={12}/></div>
-          <span className="text-xs font-bold text-gray-600">Economy Class</span>
+          <div className="w-6 h-6 bg-red-500 rounded-lg shadow-lg shadow-red-500/30 flex items-center justify-center text-white"><X size={12} strokeWidth={4} /></div>
+          <span className="text-xs font-bold text-gray-600">Booked</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 bg-blue-500 rounded-lg shadow-lg shadow-blue-500/30 flex items-center justify-center text-white"><User size={12}/></div>
           <span className="text-xs font-bold text-gray-600">Selected</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-red-500 rounded-lg shadow-lg shadow-red-500/30 flex items-center justify-center text-white"><XIcon size={12}/></div>
-          <span className="text-xs font-bold text-gray-600">Booked</span>
         </div>
       </div>
 
@@ -133,26 +129,20 @@ function Seat({ seat, isSelected, onClick }) {
         relative w-11 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group
         ${isBooked ? 'bg-red-500 text-white cursor-not-allowed shadow-inner opacity-80' : 
           isSelected ? 'bg-blue-500 text-white shadow-xl shadow-blue-500/40 ring-4 ring-blue-100 z-10' : 
-          'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20'}
+          'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20'}
       `}
     >
-      {isBooked ? <XIcon size={16}/> : isSelected ? <User size={16}/> : <Armchair size={16}/>}
+      {isBooked ? <X size={16} strokeWidth={4} /> : isSelected ? <User size={16}/> : (
+        seat.class === 'First Class' ? <Crown size={16}/> : 
+        seat.class === 'Business Class' ? <Star size={16}/> : <Armchair size={16}/>
+      )}
       
       {/* Tooltip on hover */}
       {!isBooked && (
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 shadow-xl">
-          {seat.seat_number}
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-black px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 shadow-xl z-20">
+          {seat.seat_number} - {seat.class}
         </div>
       )}
     </motion.button>
-  );
-}
-
-function XIcon({ size }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18"></line>
-      <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
   );
 }

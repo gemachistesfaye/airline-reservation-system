@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { adminGetStats, adminGetAnalytics, adminGetBookings, getFlights, adminAddFlight, adminUpdateFlight, adminDeleteFlight, adminGetUsers, adminToggleUserStatus, adminGetStudentVerifications, adminReviewStudentVerification } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, Plane, Users, Calendar, TrendingUp, Trash2, Edit3, Plus, X, Search, MapPin, Clock, ShieldCheck, ShieldAlert, CreditCard, Star, Crown, Armchair, GraduationCap, DollarSign, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Plane, Users, Calendar, TrendingUp, Trash2, Edit3, X, ArrowRight, DollarSign, BarChart3, Armchair, Star, Crown, GraduationCap, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
+
+const API_BASE = "http://localhost/airline-reservation-system/backend";
 
 export default function Admin() {
   const { showToast } = useToast();
@@ -136,79 +138,97 @@ export default function Admin() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-4">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-primary-100 border-t-primary-600 rounded-full animate-spin"></div>
+        <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary-600" size={24} />
+      </div>
+      <p className="font-black text-gray-400 uppercase tracking-widest text-[10px]">Accessing Control Center...</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
       
       {/* SIDEBAR */}
-      <aside className="w-80 bg-white border-r border-gray-100 flex flex-col p-8 pt-32 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 mb-10 px-4">
-           <div className="w-10 h-10 bg-gray-900 text-white rounded-xl flex items-center justify-center shadow-lg"><Plane size={24} /></div>
-           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Admin <span className="text-primary-600">Gate</span></h2>
+      <aside className="w-80 bg-white border-r border-gray-100 flex flex-col p-8 pt-32 sticky top-0 h-screen overflow-y-auto">
+        <div className="flex items-center gap-4 mb-12 px-4 group cursor-pointer">
+           <div className="w-11 h-11 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-2xl group-hover:bg-primary-600 transition-colors"><Plane size={24} className="rotate-[-45deg]" /></div>
+           <div>
+             <h2 className="text-xl font-black text-gray-900 tracking-tight leading-none mb-1">Control Panel</h2>
+             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Admin Authorization</p>
+           </div>
         </div>
+        
         <nav className="space-y-2 flex-1">
           {[
-            { id: "overview", icon: <LayoutDashboard size={20} />, label: "Overview" },
-            { id: "flights", icon: <Plane size={20} />, label: "Flight Fleet" },
+            { id: "overview", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
+            { id: "flights", icon: <Plane size={20} />, label: "Fleet Management" },
             { id: "bookings", icon: <Calendar size={20} />, label: "Passenger Manifest" },
             { id: "users", icon: <Users size={20} />, label: "User Accounts" },
-            { id: "students", icon: <GraduationCap size={20} />, label: "Student IDs" },
+            { id: "students", icon: <GraduationCap size={20} />, label: "Student IDs", badge: studentVerifications.filter(v => v.student_verification_status === 'pending').length },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === tab.id ? 'bg-primary-600 text-white shadow-xl shadow-primary-500/30' : 'text-gray-500 hover:bg-gray-50'}`}
+              className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl font-black transition-all ${activeTab === tab.id ? 'bg-primary-600 text-white shadow-2xl shadow-primary-500/30' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
             >
-              {tab.icon} {tab.label}
+              <div className="flex items-center gap-4">
+                {tab.icon}
+                <span className="text-sm">{tab.label}</span>
+              </div>
+              {tab.badge > 0 && <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black ${activeTab === tab.id ? 'bg-white text-primary-600' : 'bg-red-500 text-white'}`}>{tab.badge}</span>}
             </button>
           ))}
         </nav>
       </aside>
 
       <main className="flex-1 p-12 pt-32">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           
           <AnimatePresence mode="wait">
             
             {activeTab === "overview" && (
               <motion.div key="ov" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-                   <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100 flex flex-col gap-4">
-                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Plane size={24}/></div>
-                      <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Flights</p><h3 className="text-2xl font-black text-gray-900">{stats.flights}</h3></div>
-                   </div>
-                   <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100 flex flex-col gap-4">
-                      <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><Calendar size={24}/></div>
-                      <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Bookings</p><h3 className="text-2xl font-black text-gray-900">{stats.bookings}</h3></div>
-                   </div>
-                   <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100 flex flex-col gap-4">
-                      <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center"><DollarSign size={24}/></div>
-                      <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Revenue</p><h3 className="text-2xl font-black text-gray-900">${parseFloat(stats.revenue).toLocaleString()}</h3></div>
-                   </div>
-                   <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100 flex flex-col gap-4">
-                      <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center"><Users size={24}/></div>
-                      <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Registered Users</p><h3 className="text-2xl font-black text-gray-900">{stats.passengers}</h3></div>
-                   </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 mb-12">
+                   {[
+                     { label: 'Active Flights', val: stats.flights, icon: <Plane size={24}/>, color: 'blue' },
+                     { label: 'Total Bookings', val: stats.bookings, icon: <Calendar size={24}/>, color: 'indigo' },
+                     { label: 'Total Revenue', val: `$${parseFloat(stats.revenue).toLocaleString()}`, icon: <DollarSign size={24}/>, color: 'emerald' },
+                     { label: 'Registered Users', val: stats.passengers, icon: <Users size={24}/>, color: 'purple' }
+                   ].map(s => (
+                     <div key={s.label} className="bg-white p-8 rounded-[3rem] shadow-2xl shadow-blue-900/5 border border-gray-100 flex flex-col gap-6 group hover:border-primary-600/20 transition-all">
+                        <div className={`w-14 h-14 bg-${s.color}-50 text-${s.color}-600 rounded-[1.5rem] flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>{s.icon}</div>
+                        <div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{s.label}</p>
+                          <h3 className="text-3xl font-black text-gray-900 tracking-tighter">{s.val}</h3>
+                        </div>
+                     </div>
+                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
-                   {/* OCCUPANCY CHARTS */}
-                   <div className="space-y-8">
-                      <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
-                        <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-3"><TrendingUp className="text-primary-600" size={24} /> Flight Occupancy Rates</h3>
-                        <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12">
+                   {/* ANALYTICS */}
+                   <div className="space-y-12">
+                      <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-blue-900/5 border border-gray-100">
+                        <div className="flex items-center justify-between mb-10">
+                          <h3 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-4"><TrendingUp className="text-primary-600" size={28} /> Route Performance</h3>
+                          <div className="bg-gray-50 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400">Live Occupancy</div>
+                        </div>
+                        <div className="space-y-8">
                             {analytics.occupancy.map(f => (
                             <div key={f.flight_number}>
-                                <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase mb-2">
-                                    <span>{f.flight_number} • {f.origin} to {f.destination}</span>
-                                    <span>{f.occupancy_rate}%</span>
+                                <div className="flex justify-between text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">
+                                    <span>{f.flight_number} • {f.origin} <ArrowRight size={10} className="inline mx-1"/> {f.destination}</span>
+                                    <span className={f.occupancy_rate > 80 ? 'text-emerald-600' : 'text-primary-600'}>{f.occupancy_rate}% Full</span>
                                 </div>
-                                <div className="h-3 bg-gray-50 rounded-full overflow-hidden">
+                                <div className="h-4 bg-gray-50 rounded-full overflow-hidden border border-gray-100">
                                     <motion.div 
                                         initial={{ width: 0 }}
                                         animate={{ width: `${f.occupancy_rate}%` }}
-                                        className="h-full bg-primary-600 rounded-full" 
+                                        transition={{ duration: 1 }}
+                                        className={`h-full rounded-full ${f.occupancy_rate > 80 ? 'bg-emerald-500' : 'bg-primary-600 shadow-lg shadow-primary-500/20'}`} 
                                     />
                                 </div>
                             </div>
@@ -216,41 +236,46 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
-                        <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-3"><BarChart3 className="text-primary-600" size={24} /> Seat Usage per Class</h3>
-                        <div className="grid grid-cols-3 gap-6">
+                      <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-blue-900/5 border border-gray-100">
+                        <div className="flex items-center justify-between mb-10">
+                           <h3 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-4"><BarChart3 className="text-primary-600" size={28} /> Service Distribution</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {[
-                                { label: 'Economy', count: analytics.classUsage.economy_booked, color: 'bg-emerald-500', icon: <Armchair size={16}/> },
-                                { label: 'Business', count: analytics.classUsage.business_booked, color: 'bg-indigo-500', icon: <Star size={16}/> },
-                                { label: 'First Class', count: analytics.classUsage.first_booked, color: 'bg-amber-500', icon: <Crown size={16}/> }
+                                { label: 'Economy', count: analytics.classUsage.economy_booked, color: 'emerald', icon: <Armchair size={20}/> },
+                                { label: 'Business', count: analytics.classUsage.business_booked, color: 'indigo', icon: <Star size={20}/> },
+                                { label: 'First Class', count: analytics.classUsage.first_booked, color: 'amber', icon: <Crown size={20}/> }
                             ].map(item => (
-                                <div key={item.label} className="text-center p-6 bg-gray-50 rounded-3xl border border-gray-100/50">
-                                    <div className={`w-10 h-10 ${item.color} text-white rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-${item.color.split('-')[1]}-200`}>{item.icon}</div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{item.label}</p>
-                                    <h4 className="text-2xl font-black text-gray-900">{item.count || 0}</h4>
-                                    <p className="text-[10px] font-bold text-gray-400">Seats Booked</p>
+                                <div key={item.label} className="text-center p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100/50 group hover:bg-white hover:shadow-2xl transition-all">
+                                    <div className={`w-14 h-14 bg-${item.color}-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-${item.color}-500/20 group-hover:scale-110 transition-transform`}>{item.icon}</div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">{item.label}</p>
+                                    <h4 className="text-3xl font-black text-gray-900 mb-1">{item.count || 0}</h4>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Reservations</p>
                                 </div>
                             ))}
                         </div>
                       </div>
                    </div>
 
-                   {/* RECENT ACTIVITY */}
-                   <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
-                     <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-3"><Calendar className="text-primary-600" size={24} /> Recent Manifest Entries</h3>
-                     <div className="space-y-4">
-                       {adminBookings.slice(0, 8).map(b => (
-                         <div key={b.booking_id} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100/50 hover:bg-white hover:shadow-lg transition-all">
-                            <div className="flex items-center gap-3">
-                               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-primary-600 shadow-sm text-xs">{b.flight_number}</div>
+                   {/* RECENT FEED */}
+                   <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-blue-900/5 border border-gray-100 overflow-hidden relative">
+                     <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                        <Users size={200} />
+                     </div>
+                     <h3 className="text-2xl font-black text-gray-900 mb-10 flex items-center gap-4 relative z-10"><Calendar className="text-primary-600" size={28} /> Recent Manifest</h3>
+                     <div className="space-y-5 relative z-10">
+                       {adminBookings.slice(0, 10).map(b => (
+                         <div key={b.booking_id} className="flex justify-between items-center p-5 bg-gray-50 rounded-[2rem] border border-gray-100 hover:bg-white hover:shadow-xl transition-all group">
+                            <div className="flex items-center gap-4">
+                               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center font-black text-primary-600 shadow-sm border border-gray-100 group-hover:bg-primary-600 group-hover:text-white transition-all duration-500">{b.flight_number}</div>
                                <div>
                                    <div className="text-sm font-black text-gray-900">{b.user_name}</div>
-                                   <div className="text-[10px] font-bold text-gray-400 uppercase">{b.seat_class.split(' ')[0]} • {b.seat_number}</div>
+                                   <div className="text-[10px] font-bold text-gray-400 uppercase">{b.seat_class.split(' ')[0]} • Seat {b.seat_number}</div>
                                </div>
                             </div>
                             <div className="text-right">
                                 <div className="text-sm font-black text-gray-900">${parseFloat(b.total_price).toFixed(0)}</div>
-                                <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase ${b.status === 'Confirmed' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>{b.status}</span>
+                                <span className={`px-3 py-1 text-[9px] font-black rounded-lg uppercase tracking-widest ${b.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{b.status}</span>
                             </div>
                          </div>
                        ))}
@@ -261,53 +286,58 @@ export default function Admin() {
             )}
 
             {activeTab === "flights" && (
-              <motion.div key="fl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
-                 <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
+              <motion.div key="fl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
+                 <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-100">
                     <div className="flex justify-between items-center mb-10">
-                      <h3 className="text-2xl font-black text-gray-900">{editingFlight ? "Update Route Details" : "Establish New Flight Route"}</h3>
-                      {editingFlight && <button onClick={resetForm} className="text-gray-400 hover:text-gray-900 transition-colors"><X/></button>}
+                      <div>
+                        <h3 className="text-3xl font-black text-gray-900 tracking-tight">{editingFlight ? "Update Flight Path" : "Establish New Route"}</h3>
+                        <p className="text-gray-500 font-medium">Configure route parameters and tiered cabin availability.</p>
+                      </div>
+                      {editingFlight && <button onClick={resetForm} className="p-3 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-2xl transition-all"><X size={24}/></button>}
                     </div>
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Flight Number</label><input className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all" value={flightNumber} onChange={e => setFlightNumber(e.target.value)} required placeholder="AS102" /></div>
-                      <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Origin City</label><input className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all" value={origin} onChange={e => setOrigin(e.target.value)} required placeholder="e.g. Addis Ababa" /></div>
-                      <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Destination City</label><input className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all" value={destination} onChange={e => setDestination(e.target.value)} required placeholder="e.g. Nairobi" /></div>
-                      <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Departure Schedule</label><input type="datetime-local" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all" value={departureTime} onChange={e => setDepartureTime(e.target.value)} required /></div>
-                      <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Arrival Schedule</label><input type="datetime-local" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} required /></div>
-                      <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase ml-1">Base Price ($)</label><input type="number" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all" value={basePrice} onChange={e => setBasePrice(e.target.value)} required /></div>
+                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                      <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Flight Number</label><input className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-primary-600/5 transition-all outline-none" value={flightNumber} onChange={e => setFlightNumber(e.target.value)} required placeholder="AS700" /></div>
+                      <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Origin City</label><input className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-primary-600/5 transition-all outline-none" value={origin} onChange={e => setOrigin(e.target.value)} required placeholder="London" /></div>
+                      <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Destination City</label><input className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-primary-600/5 transition-all outline-none" value={destination} onChange={e => setDestination(e.target.value)} required placeholder="Dubai" /></div>
+                      <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Departure Schedule</label><input type="datetime-local" className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-primary-600/5 transition-all outline-none" value={departureTime} onChange={e => setDepartureTime(e.target.value)} required /></div>
+                      <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Arrival Schedule</label><input type="datetime-local" className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-primary-600/5 transition-all outline-none" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} required /></div>
+                      <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Base Price ($)</label><input type="number" className="w-full px-6 py-5 bg-gray-50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-primary-600/5 transition-all outline-none" value={basePrice} onChange={e => setBasePrice(e.target.value)} required /></div>
                       
-                      <div className="col-span-full grid grid-cols-3 gap-6 pt-6 border-t border-gray-100 mt-4">
-                         <div className="space-y-2"><label className="text-[10px] font-black text-amber-600 uppercase flex items-center gap-2 tracking-widest"><Crown size={14}/> First Class Capacity</label><input type="number" className="w-full px-5 py-4 bg-amber-50/30 border-none rounded-2xl font-black text-gray-700 focus:ring-2 focus:ring-amber-500 transition-all" value={fstSeats} onChange={e => setFstSeats(e.target.value)} required /></div>
-                         <div className="space-y-2"><label className="text-[10px] font-black text-indigo-600 uppercase flex items-center gap-2 tracking-widest"><Star size={14}/> Business Capacity</label><input type="number" className="w-full px-5 py-4 bg-indigo-50/30 border-none rounded-2xl font-black text-gray-700 focus:ring-2 focus:ring-indigo-500 transition-all" value={busSeats} onChange={e => setBusSeats(e.target.value)} required /></div>
-                         <div className="space-y-2"><label className="text-[10px] font-black text-emerald-600 uppercase flex items-center gap-2 tracking-widest"><Armchair size={14}/> Economy Capacity</label><input type="number" className="w-full px-5 py-4 bg-emerald-50/30 border-none rounded-2xl font-black text-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all" value={ecoSeats} onChange={e => setEcoSeats(e.target.value)} required /></div>
+                      <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-8 pt-10 border-t border-gray-100 mt-4">
+                         <div className="space-y-3"><label className="text-[11px] font-black text-amber-600 uppercase flex items-center gap-3 tracking-widest"><Crown size={16}/> First Class Capacity</label><input type="number" className="w-full px-6 py-5 bg-amber-50/50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-amber-500/20 transition-all outline-none" value={fstSeats} onChange={e => setFstSeats(e.target.value)} required /></div>
+                         <div className="space-y-3"><label className="text-[11px] font-black text-indigo-600 uppercase flex items-center gap-3 tracking-widest"><Star size={16}/> Business Capacity</label><input type="number" className="w-full px-6 py-5 bg-indigo-50/50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none" value={busSeats} onChange={e => setBusSeats(e.target.value)} required /></div>
+                         <div className="space-y-3"><label className="text-[11px] font-black text-emerald-600 uppercase flex items-center gap-3 tracking-widest"><Armchair size={16}/> Economy Capacity</label><input type="number" className="w-full px-6 py-5 bg-emerald-50/50 border-none rounded-[1.5rem] font-black text-gray-900 focus:ring-4 focus:ring-emerald-500/20 transition-all outline-none" value={ecoSeats} onChange={e => setEcoSeats(e.target.value)} required /></div>
                       </div>
 
-                      <div className="col-span-full pt-8">
-                        <button type="submit" disabled={actionLoading} className="w-full bg-gray-900 text-white font-black py-5 rounded-[2rem] shadow-2xl hover:bg-black transition-all active:scale-[0.98]">
-                          {actionLoading ? "Processing Operation..." : editingFlight ? "Commit Route Changes" : "Deploy New Flight Route"}
+                      <div className="col-span-full pt-10">
+                        <button type="submit" disabled={actionLoading} className="w-full bg-primary-600 text-white font-black py-6 rounded-[2.5rem] shadow-2xl shadow-primary-500/30 hover:bg-primary-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                          {actionLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : editingFlight ? "Update Deployment Data" : "Initiate Fleet Expansion"}
                         </button>
                       </div>
                     </form>
                  </div>
 
-                 <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-                    <h3 className="text-2xl font-black text-gray-900 mb-8">System Flight Fleet</h3>
-                    <div className="grid grid-cols-1 gap-4">
+                 <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-100">
+                    <h3 className="text-3xl font-black text-gray-900 mb-10 tracking-tight">Active Fleet Inventory</h3>
+                    <div className="grid grid-cols-1 gap-6">
                       {flights.map(f => (
-                        <div key={f.flight_id} className="p-6 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex items-center justify-between hover:bg-white hover:shadow-2xl hover:shadow-blue-900/5 transition-all group">
-                          <div className="flex items-center gap-6">
-                            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center font-black text-primary-600 shadow-md border border-gray-50 group-hover:scale-110 transition-transform">{f.flight_number}</div>
+                        <div key={f.flight_id} className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex flex-col md:flex-row items-center justify-between hover:bg-white hover:shadow-2xl hover:border-primary-600/10 transition-all group">
+                          <div className="flex items-center gap-8 mb-6 md:mb-0">
+                            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center font-black text-primary-600 shadow-xl border border-gray-100 group-hover:bg-primary-600 group-hover:text-white transition-all duration-500">{f.flight_number}</div>
                             <div>
-                                <div className="font-black text-gray-900 text-lg">{f.origin} <ArrowRight className="inline mx-2 text-gray-300" size={16}/> {f.destination}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> {new Date(f.departure_time).toLocaleString()}</div>
+                                <div className="font-black text-gray-900 text-xl tracking-tight mb-1">{f.origin} <ArrowRight className="inline mx-2 text-gray-300" size={18}/> {f.destination}</div>
+                                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><Calendar size={14}/> {new Date(f.departure_time).toLocaleString()}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                             <div className="text-right mr-4">
-                                 <p className="text-lg font-black text-gray-900">${parseFloat(f.base_price).toFixed(0)}</p>
-                                 <p className="text-[10px] font-bold text-gray-400 uppercase">{f.available_seats} Seats Avail</p>
+                          <div className="flex items-center gap-6 w-full md:w-auto">
+                             <div className="text-right mr-4 hidden xl:block">
+                                 <p className="text-2xl font-black text-gray-900 tracking-tighter">${parseFloat(f.base_price).toFixed(0)}</p>
+                                 <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{f.available_seats} SEATS OPEN</p>
                              </div>
-                             <button onClick={() => handleEditClick(f)} className="p-4 bg-white text-gray-600 rounded-2xl shadow-sm hover:bg-gray-900 hover:text-white transition-all"><Edit3 size={20}/></button>
-                             <button onClick={() => handleDelete(f.flight_id)} className="p-4 bg-white text-red-500 rounded-2xl shadow-sm hover:bg-red-500 hover:text-white transition-all"><Trash2 size={20}/></button>
+                             <div className="flex gap-3 w-full md:w-auto">
+                                <button onClick={() => handleEditClick(f)} className="flex-1 md:flex-none p-5 bg-white text-gray-900 rounded-2xl shadow-sm border border-gray-100 hover:bg-gray-900 hover:text-white transition-all"><Edit3 size={20}/></button>
+                                <button onClick={() => handleDelete(f.flight_id)} className="flex-1 md:flex-none p-5 bg-white text-red-500 rounded-2xl shadow-sm border border-gray-100 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={20}/></button>
+                             </div>
                           </div>
                         </div>
                       ))}
@@ -318,39 +348,39 @@ export default function Admin() {
 
             {activeTab === "bookings" && (
               <motion.div key="bk" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100 overflow-hidden">
-                  <h3 className="text-2xl font-black text-gray-900 mb-10">Passenger Intelligence Manifest</h3>
+                <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-100 overflow-hidden">
+                  <h3 className="text-3xl font-black text-gray-900 mb-10 tracking-tight">Passenger Intelligence Manifest</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
                         <tr className="border-b border-gray-100">
-                          <th className="pb-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Passenger Details</th>
-                          <th className="pb-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Route / Service</th>
-                          <th className="pb-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Seat</th>
-                          <th className="pb-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Pricing</th>
-                          <th className="pb-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Status</th>
+                          <th className="pb-8 px-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Passenger Entity</th>
+                          <th className="pb-8 px-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Flight / Tier</th>
+                          <th className="pb-8 px-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Seat</th>
+                          <th className="pb-8 px-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Revenue</th>
+                          <th className="pb-8 px-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-right">Confirmation</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {adminBookings.map(b => (
                           <tr key={b.booking_id} className="hover:bg-gray-50/50 transition-colors">
-                            <td className="py-6">
-                                <div className="font-black text-gray-900">{b.user_name}</div>
-                                <div className="text-[10px] text-primary-600 font-black uppercase tracking-tighter">{b.ticket_number}</div>
+                            <td className="py-8 px-4">
+                                <div className="font-black text-gray-900 text-base">{b.user_name}</div>
+                                <div className="text-[10px] text-primary-600 font-black uppercase tracking-widest">{b.ticket_number}</div>
                             </td>
-                            <td className="py-6">
+                            <td className="py-8 px-4">
                                 <div className="font-black text-gray-700">{b.flight_number}</div>
                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{b.seat_class}</div>
                             </td>
-                            <td className="py-6 text-center">
-                                <span className="bg-gray-900 text-white font-black px-4 py-1.5 rounded-xl text-[10px] tracking-widest shadow-lg shadow-gray-200">{b.seat_number}</span>
+                            <td className="py-8 px-4 text-center">
+                                <span className="bg-gray-900 text-white font-black px-5 py-2 rounded-[1rem] text-[10px] tracking-widest shadow-xl shadow-gray-200">{b.seat_number}</span>
                             </td>
-                            <td className="py-6">
-                                <div className="font-black text-gray-900">${parseFloat(b.total_price).toFixed(2)}</div>
-                                <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest ${b.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{b.payment_status}</span>
+                            <td className="py-8 px-4">
+                                <div className="font-black text-gray-900 text-lg">${parseFloat(b.total_price).toFixed(2)}</div>
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${b.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{b.payment_status}</span>
                             </td>
-                            <td className="py-6 text-right">
-                                <span className={`px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase ${b.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{b.status}</span>
+                            <td className="py-8 px-4 text-right">
+                                <span className={`px-5 py-2 rounded-full text-[10px] font-black tracking-widest uppercase border ${b.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>{b.status}</span>
                             </td>
                           </tr>
                         ))}
@@ -363,27 +393,27 @@ export default function Admin() {
 
             {activeTab === "users" && (
               <motion.div key="usr" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-                  <h3 className="text-2xl font-black text-gray-900 mb-10">User Account Management</h3>
-                  <div className="grid grid-cols-1 gap-4">
+                <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-100">
+                  <h3 className="text-3xl font-black text-gray-900 mb-10 tracking-tight">Active User Directory</h3>
+                  <div className="grid grid-cols-1 gap-6">
                     {adminUsers.map(u => (
-                      <div key={u.id} className="p-6 bg-gray-50 rounded-[2.5rem] flex items-center justify-between border border-gray-100 hover:bg-white hover:shadow-2xl hover:shadow-blue-900/5 transition-all group">
-                        <div className="flex items-center gap-5">
-                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-md ${u.role === 'admin' ? 'bg-purple-600 text-white' : 'bg-primary-600 text-white'}`}>{u.name[0]}</div>
+                      <div key={u.id} className="p-8 bg-gray-50 rounded-[2.5rem] flex flex-col sm:flex-row items-center justify-between border border-gray-100 hover:bg-white hover:shadow-2xl transition-all group">
+                        <div className="flex items-center gap-6 mb-6 sm:mb-0">
+                          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl ${u.role === 'admin' ? 'bg-purple-600 text-white shadow-purple-500/20' : 'bg-primary-600 text-white shadow-primary-500/20'}`}>{u.name[0]}</div>
                           <div>
-                              <div className="font-black text-gray-900 text-lg flex items-center gap-2">
+                              <div className="font-black text-gray-900 text-xl tracking-tight flex items-center gap-3">
                                   {u.name}
-                                  {u.user_type === 'student' && <GraduationCap size={18} className="text-emerald-500" />}
+                                  {u.user_type === 'student' && <GraduationCap size={20} className="text-emerald-500" />}
                               </div>
-                              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{u.email} • {u.role}</div>
+                              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{u.email} • {u.role}</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${u.is_verified ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{u.is_verified ? 'Active Account' : 'Account Suspended'}</div>
+                        <div className="flex items-center gap-5 w-full sm:w-auto">
+                          <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${u.is_verified ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>{u.is_verified ? 'Active' : 'Suspended'}</div>
                           {u.role !== 'admin' && (
                               <button 
                                 onClick={() => handleToggleUser(u.id)} 
-                                className="px-6 py-3 bg-white text-gray-900 rounded-2xl font-black text-xs shadow-sm border border-gray-100 hover:bg-gray-900 hover:text-white transition-all active:scale-95"
+                                className="flex-1 sm:flex-none px-8 py-4 bg-white text-gray-900 rounded-2xl font-black text-xs shadow-sm border border-gray-100 hover:bg-gray-900 hover:text-white transition-all active:scale-95"
                               >
                                   {u.is_verified ? 'Suspend User' : 'Restore Access'}
                               </button>
@@ -398,31 +428,77 @@ export default function Admin() {
 
             {activeTab === "students" && (
               <motion.div key="std" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-                  <h3 className="text-2xl font-black text-gray-900 mb-8">Student Verification Requests</h3>
-                  <div className="space-y-4">
+                <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-100 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                     <GraduationCap size={200} />
+                  </div>
+                  <h3 className="text-3xl font-black text-gray-900 mb-10 tracking-tight">Student Verification Requests</h3>
+                  
+                  <div className="grid grid-cols-1 gap-8">
                     {studentVerifications.length === 0 && (
-                      <p className="text-sm font-semibold text-gray-500">No student IDs submitted yet.</p>
+                      <div className="text-center py-24 bg-gray-50 rounded-[3rem] border border-dashed border-gray-200">
+                         <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-6" />
+                         <p className="text-xl font-black text-gray-900 mb-2 tracking-tight">All caught up!</p>
+                         <p className="text-gray-400 font-medium">No pending verification requests at this moment.</p>
+                      </div>
                     )}
+                    
                     {studentVerifications.map((u) => (
-                      <div key={u.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-5 flex items-center justify-between gap-4">
-                        <div>
-                          <p className="font-black text-gray-900">{u.name}</p>
-                          <p className="text-xs font-semibold text-gray-500">{u.email}</p>
-                          <p className="text-xs font-bold text-primary-600 mt-1 uppercase">Status: {u.student_verification_status}</p>
-                          {u.student_id_file && (
-                            <a href={`http://localhost/airline-reservation-system/backend/${u.student_id_file}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-indigo-600 hover:underline">
-                              View uploaded ID
-                            </a>
-                          )}
+                      <div key={u.id} className="rounded-[3rem] border border-gray-100 bg-gray-50 p-10 flex flex-col lg:flex-row items-center justify-between gap-10 hover:bg-white hover:shadow-2xl transition-all group">
+                        <div className="flex-1 flex flex-col md:flex-row items-center gap-10">
+                           {/* ID PREVIEW */}
+                           <div className="w-48 h-32 bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 relative group/id">
+                              {u.student_id_file ? (
+                                <>
+                                  <img 
+                                    src={`${API_BASE}/${u.student_id_file}`} 
+                                    alt="Student ID" 
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover/id:scale-110" 
+                                  />
+                                  <a href={`${API_BASE}/${u.student_id_file}`} target="_blank" rel="noreferrer" className="absolute inset-0 bg-gray-900/60 opacity-0 group-hover/id:opacity-100 transition-opacity flex items-center justify-center text-white font-black text-[10px] uppercase tracking-widest gap-2">
+                                     Full View <ExternalLink size={14}/>
+                                  </a>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                                   <AlertCircle size={32} />
+                                   <span className="text-[10px] font-black uppercase mt-2">No File</span>
+                                </div>
+                              )}
+                           </div>
+                           
+                           <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="text-2xl font-black text-gray-900 tracking-tight">{u.name}</h4>
+                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${u.student_verification_status === 'pending' ? 'bg-amber-100 text-amber-700' : u.student_verification_status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                  {u.student_verification_status}
+                                </span>
+                              </div>
+                              <p className="text-gray-500 font-medium mb-4">{u.email}</p>
+                              <div className="flex items-center gap-6">
+                                 <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-primary-600"></div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Submitted 2 days ago</span>
+                                 </div>
+                              </div>
+                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button disabled={actionLoading || u.student_verified === 1} onClick={() => handleStudentVerification(u.id, "approve")} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white disabled:opacity-60">
-                            Approve
-                          </button>
-                          <button disabled={actionLoading} onClick={() => handleStudentVerification(u.id, "reject")} className="rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white disabled:opacity-60">
-                            Reject
-                          </button>
+
+                        <div className="flex items-center gap-4 w-full lg:w-auto">
+                           <button 
+                             disabled={actionLoading || u.student_verification_status === 'approved'} 
+                             onClick={() => handleStudentVerification(u.id, "approve")} 
+                             className="flex-1 lg:flex-none rounded-2xl bg-emerald-600 px-8 py-4 text-xs font-black text-white shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:grayscale"
+                           >
+                             Approve Identity
+                           </button>
+                           <button 
+                             disabled={actionLoading || u.student_verification_status === 'rejected'} 
+                             onClick={() => handleStudentVerification(u.id, "reject")} 
+                             className="flex-1 lg:flex-none rounded-2xl bg-white text-red-500 border border-gray-100 px-8 py-4 text-xs font-black shadow-sm hover:bg-red-50 transition-all disabled:opacity-50 disabled:grayscale"
+                           >
+                             Reject
+                           </button>
                         </div>
                       </div>
                     ))}

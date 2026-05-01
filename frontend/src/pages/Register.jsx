@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { registerUser } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/Toast";
-import { User, Mail, Lock, GraduationCap, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { User, Mail, Lock, GraduationCap, ArrowRight, Eye, EyeOff, ShieldCheck, Loader2, Plane, Upload, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Register() {
   const { showToast } = useToast();
@@ -56,106 +57,203 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-animated px-6">
-        <div className="w-full max-w-[460px] glass p-10 rounded-[2rem] text-center border border-white/40 shadow-2xl shadow-blue-900/10">
-           <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
-             <ShieldCheck size={38} />
-           </div>
-           <h2 className="text-3xl font-display font-bold text-gray-800 tracking-tight mb-4">Verify Your Email</h2>
-           <p className="text-gray-500 mb-8 font-medium">We've sent a verification link to <strong>{form.email}</strong>. Please check your inbox to activate your account.</p>
-           <button onClick={() => navigate('/login')} className="text-primary-600 font-bold hover:underline flex items-center justify-center gap-2 mx-auto">
-             Proceed to Login <ArrowRight size={18}/>
-           </button>
-        </div>
+      <div className="relative min-h-screen flex items-center justify-center bg-[#f8fafc] overflow-hidden">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-full max-w-[480px] z-10 px-6 text-center"
+        >
+          <div className="bg-white p-12 rounded-[2.5rem] shadow-2xl shadow-blue-900/10 border border-gray-100">
+             <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-lg shadow-emerald-500/10">
+               <ShieldCheck size={48} />
+             </div>
+             <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-4">Verify Your Email</h2>
+             <p className="text-gray-500 font-medium mb-10 leading-relaxed">
+               We've sent a secure verification link to <strong className="text-gray-900">{form.email}</strong>. 
+               Please click it to activate your account.
+             </p>
+             <button 
+                onClick={() => navigate('/login')} 
+                className="w-full bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 group shadow-xl shadow-gray-200"
+              >
+               Proceed to Login <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform"/>
+             </button>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-animated py-12 px-6">
-      
-      <div className="w-full max-w-[460px] glass p-10 rounded-[2rem] border border-white/40 shadow-2xl shadow-blue-900/10">
+    <div className="relative min-h-screen flex items-center justify-center bg-[#f8fafc] py-20 overflow-hidden">
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary-600/5 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-600/5 rounded-full blur-[120px]" />
 
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-display font-bold text-gray-800 tracking-tight tracking-tighter">Create Your Account</h2>
-          <p className="text-gray-500 mt-2 font-medium">Start booking premium flights in minutes.</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="w-full pl-12 pr-4 py-3.5 bg-white/60 border border-white/30 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all outline-none" placeholder="Full Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </div>
-
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="w-full pl-12 pr-4 py-3.5 bg-white/60 border border-white/30 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all outline-none" type="email" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-[500px] z-10 px-6"
+      >
+        <div className="bg-white p-10 md:p-12 rounded-[2.5rem] shadow-2xl shadow-blue-900/10 border border-gray-100">
           
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="w-full pl-12 pr-12 py-3.5 bg-white/60 border border-white/30 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-primary-500 transition-all outline-none" type={showPassword ? "text" : "password"} placeholder="Password (min 8 chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-primary-600 transition-colors"
+          <div className="text-center mb-10">
+            <motion.div 
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="w-16 h-16 bg-primary-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary-500/30"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <Plane size={32} className="rotate-[-45deg]" />
+            </motion.div>
+            <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Join AeroSpace</h2>
+            <p className="text-gray-500 font-medium">Create your account for premium travel experiences</p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-600 transition-colors" size={20} />
+                <input 
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-700 focus:bg-white focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600 outline-none transition-all placeholder:text-gray-300" 
+                  placeholder="John Doe" 
+                  value={form.name} 
+                  onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-600 transition-colors" size={20} />
+                <input 
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-700 focus:bg-white focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600 outline-none transition-all placeholder:text-gray-300" 
+                  type="email" 
+                  placeholder="john@example.com" 
+                  value={form.email} 
+                  onChange={(e) => setForm({ ...form, email: e.target.value })} 
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-600 transition-colors" size={20} />
+                <input 
+                  className="w-full pl-12 pr-14 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-gray-700 focus:bg-white focus:ring-4 focus:ring-primary-600/5 focus:border-primary-600 outline-none transition-all placeholder:text-gray-300" 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="••••••••" 
+                  value={form.password} 
+                  onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              <div className="flex gap-2 px-1">
+                {[1, 2, 3, 4].map((level) => (
+                  <div
+                    key={level}
+                    className={`h-1.5 flex-1 rounded-full transition-colors ${passwordStrength >= level ? "bg-emerald-500" : "bg-gray-100"}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Traveler Type</label>
+              <div className="grid grid-cols-2 gap-4">
+                 <button 
+                  type="button"
+                  onClick={() => setForm({...form, user_type: 'regular'})}
+                  className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black transition-all ${form.user_type === 'regular' ? 'bg-gray-900 text-white shadow-xl shadow-gray-200' : 'bg-gray-50 text-gray-400 border border-gray-100 hover:border-gray-200'}`}
+                 >
+                   Standard
+                 </button>
+                 <button 
+                  type="button"
+                  onClick={() => setForm({...form, user_type: 'student'})}
+                  className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black transition-all ${form.user_type === 'student' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-500/20' : 'bg-gray-50 text-gray-400 border border-gray-100 hover:border-gray-200'}`}
+                 >
+                   <GraduationCap size={20}/> Student
+                 </button>
+              </div>
+              
+              <AnimatePresence>
+                {form.user_type === 'student' && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="rounded-[2rem] border-2 border-dashed border-emerald-100 bg-emerald-50/50 p-6 mt-2">
+                      <div className="text-center">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                           <Upload size={20} className="text-emerald-600" />
+                        </div>
+                        <p className="text-xs font-black text-emerald-700 uppercase tracking-widest mb-1">Upload Student ID</p>
+                        <p className="text-[10px] text-emerald-600/70 font-medium mb-4">Required for 20% discount eligibility</p>
+                        
+                        <label className="inline-block px-6 py-2.5 bg-white text-emerald-600 font-bold text-xs rounded-xl shadow-sm border border-emerald-100 cursor-pointer hover:bg-emerald-50 transition-colors">
+                          Choose File
+                          <input type="file" accept="image/*,.pdf" onChange={handleStudentFilePreview} className="hidden" />
+                        </label>
+                      </div>
+
+                      {studentPreview && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="mt-6 relative group"
+                        >
+                          <img src={studentPreview} alt="Student ID preview" className="w-full h-32 rounded-2xl border border-white shadow-md object-cover" />
+                          <div className="absolute inset-0 bg-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+                             <CheckCircle2 size={32} className="text-white" />
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button
+              onClick={register}
+              disabled={loading}
+              className="w-full bg-primary-600 text-white font-black py-4 rounded-2xl hover:bg-primary-700 shadow-2xl shadow-primary-500/30 transition-all active:scale-[0.98] mt-4 disabled:opacity-70 flex justify-center items-center gap-3 group"
+            >
+              {loading ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  Create Account <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </div>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4].map((level) => (
-              <div
-                key={level}
-                className={`h-1.5 flex-1 rounded-full ${passwordStrength >= level ? "bg-emerald-500" : "bg-white/50"}`}
-              />
-            ))}
+
+          <div className="mt-10 pt-8 border-t border-gray-50 text-center">
+            <p className="text-gray-500 font-bold text-sm">
+              Already have an account?
+              <span onClick={() => navigate("/login")} className="text-primary-600 font-black hover:text-primary-700 cursor-pointer ml-2 transition-colors">
+                Sign In
+              </span>
+            </p>
           </div>
 
-          <div className="space-y-2 pt-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Type</label>
-            <div className="grid grid-cols-2 gap-3">
-               <button 
-                type="button"
-                onClick={() => setForm({...form, user_type: 'regular'})}
-                className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${form.user_type === 'regular' ? 'bg-gray-900 text-white shadow-lg' : 'bg-white/50 text-gray-500 border border-white/20'}`}
-               >
-                 Regular
-               </button>
-               <button 
-                type="button"
-                onClick={() => setForm({...form, user_type: 'student'})}
-                className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${form.user_type === 'student' ? 'bg-emerald-500 text-white shadow-lg' : 'bg-white/50 text-gray-500 border border-white/20'}`}
-               >
-                 <GraduationCap size={16}/> Student
-               </button>
-            </div>
-            {form.user_type === 'student' && (
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
-                <p className="text-[10px] text-emerald-600 font-bold ml-1 uppercase tracking-tighter mb-2">Upload student ID for verification (optional now, required before discount).</p>
-                <input type="file" accept="image/*,.pdf" onChange={handleStudentFilePreview} className="text-xs font-semibold text-gray-600" />
-                {studentPreview && <img src={studentPreview} alt="Student ID preview" className="mt-3 h-24 rounded-lg border border-emerald-100 object-cover" />}
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={register}
-            disabled={loading}
-            className="w-full bg-primary-600 text-white font-bold py-4 rounded-xl hover:bg-primary-700 shadow-xl shadow-primary-500/20 transition-all active:scale-[0.98] mt-6 disabled:opacity-70 flex justify-center items-center gap-2"
-          >
-            {loading ? "Initializing..." : "Create Account"}
-          </button>
         </div>
-
-        <p className="text-center text-gray-500 font-medium text-sm mt-8">
-          Already have an account?
-          <span onClick={() => navigate("/login")} className="text-gray-900 font-black hover:underline cursor-pointer ml-1.5 transition-colors">
-            Sign In
-          </span>
-        </p>
-
-      </div>
+      </motion.div>
     </div>
+  );
+}
+
   );
 }
