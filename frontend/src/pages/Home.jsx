@@ -242,7 +242,7 @@ export default function Home() {
                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Carbon Goals</p>
                       </div>
                    </div>
-                </div>
+                </motion.div>
              </div>
 
              <div className="grid grid-cols-1 gap-6">
