@@ -67,8 +67,14 @@ export const changePassword = (data) =>
 export const getUserProfile = () => 
   fetch(`${BASE_URL}/profile`, { headers: getHeaders(true) }).then(handleResponse);
 
-export const updateUserProfile = (data) => 
-  fetch(`${BASE_URL}/profile`, { method: "POST", headers: getHeaders(true), body: JSON.stringify(data) }).then(handleResponse);
+export const updateUserProfile = (data) => {
+  const isFormData = data instanceof FormData;
+  return fetch(`${BASE_URL}/profile`, {
+    method: "POST",
+    headers: isFormData ? getAuthHeadersOnly() : getHeaders(true),
+    body: isFormData ? data : JSON.stringify(data),
+  }).then(handleResponse);
+};
 
 export const uploadStudentId = (file) => {
   const body = new FormData();

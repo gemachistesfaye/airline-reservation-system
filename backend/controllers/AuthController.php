@@ -245,7 +245,7 @@ class AuthController {
     public function getUserProfile() {
         $user = $this->auth->verify();
         $stmt = $this->conn->prepare("
-            SELECT id, name, username, email, role, user_type, is_student, student_id_file, passport_file, student_verified, student_verification_status, created_at
+            SELECT id, name, username, email, role, user_type, is_student, student_id_file, passport_file, student_verified, student_verification_status, profile_image, created_at
             FROM users
             WHERE id = ?
         ");
@@ -256,14 +256,28 @@ class AuthController {
 
     public function updateUserProfile() {
         $user = $this->auth->verify();
-        $data = json_decode(file_get_contents("php://input"));
 
-        if (!$data || empty($data->name)) {
-             $this->sendJSON(["status" => "error", "message" => "Name is required"], 400);
+        // Support multipart/form-data for file uploads
+        $name     = $_POST['name']     ?? null;
+        $username = $_POST['username'] ?? null;
+
+        if (!$name) {
+            $this->sendJSON(["status" => "error", "message" => "Name is required"], 400);
         }
 
-        $stmt = $this->conn->prepare("UPDATE users SET name = ?, username = ? WHERE id = ?");
-        $stmt->execute([$data->name, $data->username ?? null, $user->id]);
+        // Handle optional profile image upload
+        $profileImagePath = null;
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+            $profileImagePath = $this->handleFileUpload('profile_image', 'uploads/profile_images', 'avatar');
+        }
+
+        if ($profileImagePath) {
+            $stmt = $this->conn->prepare("UPDATE users SET name = ?, username = ?, profile_image = ? WHERE id = ?");
+            $stmt->execute([$name, $username ?? null, $profileImagePath, $user->id]);
+        } else {
+            $stmt = $this->conn->prepare("UPDATE users SET name = ?, username = ? WHERE id = ?");
+            $stmt->execute([$name, $username ?? null, $user->id]);
+        }
 
         $this->sendJSON(["status" => "success", "message" => "Profile updated!"]);
     }
