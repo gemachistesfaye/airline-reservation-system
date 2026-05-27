@@ -48,10 +48,12 @@ export default function Navbar() {
         <div className="flex items-center gap-2 md:gap-8 font-black text-gray-400 text-[11px] uppercase tracking-widest">
           {/* COMMON LINKS */}
           <div className="hidden lg:flex items-center gap-8">
-            <Link to="/" className={`flex items-center gap-2 hover:text-primary-600 transition-colors ${isActive('/') ? 'text-primary-600' : ''}`}>
-              <Home size={16} /> Home
-            </Link>
-            {role !== 'admin' && (
+            {!isAuth && (
+              <Link to="/" className={`flex items-center gap-2 hover:text-primary-600 transition-colors ${isActive('/') ? 'text-primary-600' : ''}`}>
+                <Home size={16} /> Home
+              </Link>
+            )}
+            {isAuth && role !== 'admin' && (
               <Link to="/flights" className={`flex items-center gap-2 hover:text-primary-600 transition-colors ${isActive('/flights') ? 'text-primary-600' : ''}`}>
                 <Compass size={16} /> Flights
               </Link>

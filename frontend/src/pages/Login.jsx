@@ -24,7 +24,7 @@ export default function Login() {
         
         // Redirect based on role
         if (response.user.role === 'admin') navigate("/admin");
-        else navigate("/flights");
+        else navigate("/dashboard");
       } else {
         showToast(response.message, "error");
       }

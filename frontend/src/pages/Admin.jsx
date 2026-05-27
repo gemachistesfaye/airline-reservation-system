@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminGetStats, adminGetBookings, adminGetUsers, adminGetStudentVerifications, adminReviewStudentVerification, adminDeleteUser, adminToggleUserStatus } from "../services/api";
+import { adminGetStats, adminGetBookings, adminGetUsers, adminGetStudentVerifications, adminReviewStudentVerification, adminDeleteUser, adminToggleUserStatus, adminAddFlight, adminDeleteFlight } from "../services/api";
 import { useToast } from "../components/Toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -283,7 +283,7 @@ export default function Admin() {
                            </thead>
                            <tbody className="divide-y divide-gray-50">
                               {flights.map(f => (
-                                <tr key={f.id} className="group hover:bg-gray-50/50 transition-colors">
+                                <tr key={f.flight_id} className="group hover:bg-gray-50/50 transition-colors">
                                    <td className="px-8 py-6">
                                       <p className="font-black text-gray-900">{f.flight_number}</p>
                                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(f.departure_time).toLocaleDateString()}</p>
@@ -310,7 +310,7 @@ export default function Admin() {
                                    </td>
                                    <td className="px-8 py-6 text-right">
                                       <button 
-                                        onClick={() => handleDeleteFlight(f.id)}
+                                        onClick={() => handleDeleteFlight(f.flight_id)}
                                         className="w-10 h-10 bg-red-50 text-red-600 rounded-xl inline-flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
                                       >
                                          <XCircle size={18} />

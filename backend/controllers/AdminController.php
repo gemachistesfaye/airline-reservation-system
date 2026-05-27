@@ -134,17 +134,27 @@ class AdminController {
         $this->conn->prepare("INSERT INTO seats (flight_id, seat_number, class) VALUES (?, ?, ?)")->execute([$fId, $num, $class]);
     }
 
-    public function deleteFlight() {
+    public function deleteFlight($flightId) {
+        // Ensure only admins can delete flights
         $this->auth->requireAdmin();
-        $data = json_decode(file_get_contents("php://input"));
-        $id = $data->flight_id ?? null;
 
-        if (!$id) $this->sendJSON(["status" => "error", "message" => "flight_id required"], 400);
+        // Validate the supplied ID
+        if (empty($flightId) || !is_numeric($flightId)) {
+            $this->sendJSON(["status" => "error", "message" => "Valid flight ID required"], 400);
+            return;
+        }
 
+        // Execute the delete query
         $stmt = $this->conn->prepare("DELETE FROM flights WHERE flight_id = ?");
-        $stmt->execute([$id]);
+        $stmt->execute([$flightId]);
 
-        $this->sendJSON(["status" => "success", "message" => "Flight deleted"]);
+        // Check if a row was actually removed
+        if ($stmt->rowCount() === 0) {
+            $this->sendJSON(["status" => "error", "message" => "Flight not found"], 404);
+            return;
+        }
+
+        $this->sendJSON(["status" => "success", "message" => "Flight deleted successfully"]);
     }
 
     // --- USER MANAGEMENT ---

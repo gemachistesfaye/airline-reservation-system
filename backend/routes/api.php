@@ -55,7 +55,7 @@ if ($route === "/admin/users/delete" && $method === "DELETE") (new AdminControll
 if ($route === "/admin/student-verifications" && $method === "GET") (new AdminController($conn))->getStudentVerifications();
 if (preg_match('/^\/admin\/student-verifications\/(\d+)$/', $route, $m) && $method === "POST") (new AdminController($conn))->reviewStudentVerification($m[1]);
 if ($route === "/admin/flights" && $method === "POST") (new AdminController($conn))->addFlight();
-if ($route === "/admin/flights" && $method === "DELETE") (new AdminController($conn))->deleteFlight();
+if (preg_match('/^\/admin\/flights\/(\d+)$/', $route, $m) && $method === "DELETE") (new AdminController($conn))->deleteFlight($m[1]);
 
 // Fallback
 http_response_code(404);

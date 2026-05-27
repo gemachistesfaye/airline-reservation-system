@@ -249,7 +249,7 @@ export default function Flights() {
                         </div>
 
                         <button 
-                          onClick={() => navigate(`/book/${f.flight_id}`)}
+                          onClick={() => navigate(`/booking/${f.flight_id}`)}
                           className="w-full bg-gray-900 text-white font-black py-5 px-10 rounded-2xl hover:bg-primary-600 transition-all shadow-xl shadow-gray-200 flex items-center justify-center gap-3 group-hover:scale-[1.02] active:scale-95"
                         >
                           Select Cabin <ArrowRight size={20} />

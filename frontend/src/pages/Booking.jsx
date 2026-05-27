@@ -204,7 +204,10 @@ export default function Booking() {
                       <button
                         key={c.name}
                         disabled={c.seats === 0}
-                        onClick={() => setSelectedClass(c.name)}
+                        onClick={() => {
+                          setSelectedClass(c.name);
+                          setTimeout(() => setStep(2), 300);
+                        }}
                         className={`p-8 rounded-[2.5rem] border-2 transition-all text-left group relative overflow-hidden flex flex-col h-full ${selectedClass === c.name ? 'border-primary-600 bg-primary-50/20' : 'border-gray-50 hover:border-gray-200 bg-gray-50/50'} ${c.seats === 0 ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                       >
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all ${selectedClass === c.name ? 'bg-primary-600 text-white shadow-xl shadow-primary-500/40' : 'bg-white text-gray-400 group-hover:text-primary-600'}`}>

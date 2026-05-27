@@ -15,5 +15,5 @@ define('SMTP_PORT', 587);
 
 // App Configuration
 define('BASE_URL_BACKEND', 'http://localhost/airline-reservation-system/backend');
-define('BASE_URL_FRONTEND', 'http://localhost:5176');
+define('BASE_URL_FRONTEND', 'http://localhost:5173');
 define('JWT_SECRET', 'airline_reservation_system_super_secret_key_2026');

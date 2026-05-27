@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, Calendar, PlaneTakeoff, ShieldCheck, Clock, Award, ArrowRight, Star, Globe, TrendingUp, Users } from "lucide-react";
@@ -6,6 +6,12 @@ import { Search, MapPin, Calendar, PlaneTakeoff, ShieldCheck, Clock, Award, Arro
 export default function Home() {
   const navigate = useNavigate();
   const [search, setSearch] = useState({ origin: "", destination: "", date: "" });
+
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -56,7 +62,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="text-7xl md:text-[9.5rem] font-black text-gray-900 tracking-tighter mb-8 leading-[0.85]"
+              className="text-5xl md:text-7xl font-black text-gray-900 tracking-tighter mb-8 leading-[0.85]"
             >
               SKY <span className="text-primary-600">LIMITLESS.</span>
             </motion.h1>

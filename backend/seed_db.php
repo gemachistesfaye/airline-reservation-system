@@ -1,5 +1,5 @@
-<?php
-require_once "backend/config/Database.php";
+﻿<?php
+require_once "../config/Database.php";
 
 $db = new Database();
 $conn = $db->connect();
@@ -84,3 +84,4 @@ function generateSeats($conn, $flightId, $eco, $bus, $first) {
 function addSeat($conn, $fId, $num, $class) {
     $conn->prepare("INSERT INTO seats (flight_id, seat_number, class) VALUES (?, ?, ?)")->execute([$fId, $num, $class]);
 }
+

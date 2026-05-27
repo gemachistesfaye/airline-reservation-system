@@ -68,9 +68,11 @@ const AnimatedRoutes = () => {
         <Route
           path="/flights"
           element={
-            <PageTransition>
-              <Flights />
-            </PageTransition>
+            <ProtectedRoute>
+              <PageTransition>
+                <Flights />
+              </PageTransition>
+            </ProtectedRoute>
           }
         />
         
@@ -88,9 +90,11 @@ const AnimatedRoutes = () => {
         <Route
           path="/payment/:booking_id"
           element={
-            <PageTransition>
-              <Payment />
-            </PageTransition>
+            <ProtectedRoute>
+              <PageTransition>
+                <Payment />
+              </PageTransition>
+            </ProtectedRoute>
           }
         />
         <Route

@@ -122,8 +122,8 @@ export const adminAddFlight = (data) =>
 export const adminUpdateFlight = (data) => 
   fetch(`${BASE_URL}/admin/flights/${data.flight_id}`, { method: "PUT", headers: getHeaders(true), body: JSON.stringify(data) }).then(handleResponse);
 
-export const adminDeleteFlight = (id) => 
-  fetch(`${BASE_URL}/admin/flights`, { method: "DELETE", headers: getHeaders(true), body: JSON.stringify({ flight_id: id }) }).then(handleResponse);
+export const adminDeleteFlight = (id) =>
+  fetch(`${BASE_URL}/admin/flights/${id}`, { method: "DELETE", headers: getHeaders(true) }).then(handleResponse);
 
 export const adminGetUsers = () => 
   fetch(`${BASE_URL}/admin/users`, { headers: getHeaders(true) }).then(handleResponse);
