@@ -51,18 +51,26 @@ class BookingController {
 
             if (!$flight || $flight[$availCol] <= 0) {
                 $this->conn->rollBack();
-                $this->sendJSON(["status" => "error", "message" => "No seats available in $seat_class"], 400);
+                $this->sendJSON(["status" => "error", "message" => "No seats available in $seat_class. Flight is fully booked."], 400);
             }
 
-            // 2. Check seat
+            // 2. Prevent duplicate booking — same user cannot book same flight twice
+            $dupStmt = $this->conn->prepare("SELECT booking_id FROM bookings WHERE user_id = ? AND flight_id = ? AND status != 'Cancelled'");
+            $dupStmt->execute([$user->id, $data->flight_id]);
+            if ($dupStmt->fetch()) {
+                $this->conn->rollBack();
+                $this->sendJSON(["status" => "error", "message" => "You already have an active booking for this flight."], 400);
+            }
+
+            // 3. Check specific seat is not already booked
             $seatStmt = $this->conn->prepare("SELECT availability_status FROM seats WHERE flight_id = ? AND seat_number = ? FOR UPDATE");
             $seatStmt->execute([$data->flight_id, $data->seat_number]);
             if ($seatStmt->fetchColumn() === 'booked') {
                 $this->conn->rollBack();
-                $this->sendJSON(["status" => "error", "message" => "Seat already taken"], 400);
+                $this->sendJSON(["status" => "error", "message" => "Seat already taken. Please select another seat."], 400);
             }
 
-            // 3. Pricing & Student Discount (20%)
+            // 4. Pricing & Student Discount (20%)
             $priceMap = [
                 'Economy Class' => 'price_economy', 
                 'Business Class' => 'price_business', 

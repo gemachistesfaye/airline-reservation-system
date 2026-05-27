@@ -135,7 +135,7 @@ export default function Booking() {
     );
   }
 
-  const baseFare = flight[priceMap[selectedClass]] || flight.base_price || 0;
+  const baseFare = parseFloat(flight?.[priceMap?.[selectedClass]] || flight?.base_price || 0);
   const studentDiscount = isStudent && studentVerified ? baseFare * 0.20 : 0;
   const taxes = (baseFare - studentDiscount) * 0.15;
   const total = baseFare - studentDiscount + taxes;
