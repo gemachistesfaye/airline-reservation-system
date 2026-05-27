@@ -19,7 +19,8 @@ export default function Admin() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newFlight, setNewFlight] = useState({
     flight_number: "", origin: "", destination: "",
-    departure_time: "", arrival_time: "", base_price: 100,
+    departure_time: "", arrival_time: "", 
+    price_economy: 100, price_business: 250, price_first_class: 500,
     economy_seats: 40, business_seats: 12, first_class_seats: 6
   });
   const { showToast } = useToast();
@@ -250,8 +251,16 @@ export default function Admin() {
                             <input required type="datetime-local" className="w-full px-6 py-3 bg-gray-50 rounded-xl font-bold border border-gray-100" value={newFlight.arrival_time} onChange={e => setNewFlight({...newFlight, arrival_time: e.target.value})} />
                          </div>
                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Base Price ($)</label>
-                            <input required type="number" className="w-full px-6 py-3 bg-gray-50 rounded-xl font-bold border border-gray-100" value={newFlight.base_price} onChange={e => setNewFlight({...newFlight, base_price: e.target.value})} />
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Economy Price ($)</label>
+                            <input required type="number" className="w-full px-6 py-3 bg-gray-50 rounded-xl font-bold border border-gray-100" value={newFlight.price_economy} onChange={e => setNewFlight({...newFlight, price_economy: e.target.value})} />
+                         </div>
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Business Price ($)</label>
+                            <input required type="number" className="w-full px-6 py-3 bg-gray-50 rounded-xl font-bold border border-gray-100" value={newFlight.price_business} onChange={e => setNewFlight({...newFlight, price_business: e.target.value})} />
+                         </div>
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">First Class Price ($)</label>
+                            <input required type="number" className="w-full px-6 py-3 bg-gray-50 rounded-xl font-bold border border-gray-100" value={newFlight.price_first_class} onChange={e => setNewFlight({...newFlight, price_first_class: e.target.value})} />
                          </div>
                          <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Economy Seats</label>

@@ -45,7 +45,7 @@ class BookingController {
         $this->conn->beginTransaction();
         try {
             // 1. Check availability
-            $stmt = $this->conn->prepare("SELECT $availCol, base_price, flight_number, origin, destination FROM flights WHERE flight_id = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT $availCol, price_economy, price_business, price_first_class, flight_number, origin, destination FROM flights WHERE flight_id = ? FOR UPDATE");
             $stmt->execute([$data->flight_id]);
             $flight = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -63,8 +63,12 @@ class BookingController {
             }
 
             // 3. Pricing & Student Discount (20%)
-            $multipliers = ['Economy Class' => 1.0, 'Business Class' => 2.5, 'First Class' => 5.0];
-            $base_fare = (float)$flight['base_price'] * $multipliers[$seat_class];
+            $priceMap = [
+                'Economy Class' => 'price_economy', 
+                'Business Class' => 'price_business', 
+                'First Class' => 'price_first_class'
+            ];
+            $base_fare = (float)$flight[$priceMap[$seat_class]];
             
             $discount = 0;
             $userStmt = $this->conn->prepare("SELECT is_student, student_verified FROM users WHERE id = ?");

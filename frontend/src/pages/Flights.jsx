@@ -233,7 +233,7 @@ export default function Flights() {
                       <div className="flex flex-col items-center xl:items-end gap-6 min-w-[240px] border-t xl:border-t-0 xl:border-l border-gray-100 pt-8 xl:pt-0 xl:pl-10 w-full xl:w-auto relative z-10">
                         <div className="text-center xl:text-right">
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Starts From</p>
-                          <p className="text-4xl font-black text-gray-900 tracking-tighter">${parseFloat(f.base_price).toFixed(0)}</p>
+                          <p className="text-4xl font-black text-gray-900 tracking-tighter">${parseFloat(f.price_economy || f.base_price).toFixed(0)}</p>
                           
                           <div className="mt-4 flex flex-wrap justify-center xl:justify-end gap-2">
                             <div className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100">

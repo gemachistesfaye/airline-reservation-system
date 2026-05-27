@@ -81,8 +81,8 @@ class AdminController {
         $total_seats = (int)($data->economy_seats ?? 0) + (int)($data->business_seats ?? 0) + (int)($data->first_class_seats ?? 0);
 
         $stmt = $this->conn->prepare("
-            INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, base_price, economy_seats_total, economy_seats_avail, business_seats_total, business_seats_avail, first_class_seats_total, first_class_seats_avail, total_seats, available_seats)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, price_economy, price_business, price_first_class, economy_seats_total, economy_seats_avail, business_seats_total, business_seats_avail, first_class_seats_total, first_class_seats_avail, total_seats, available_seats)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $data->flight_number,
@@ -90,7 +90,9 @@ class AdminController {
             $data->destination,
             $data->departure_time,
             $data->arrival_time,
-            $data->base_price,
+            $data->price_economy,
+            $data->price_business,
+            $data->price_first_class,
             $data->economy_seats, $data->economy_seats,
             $data->business_seats, $data->business_seats,
             $data->first_class_seats, $data->first_class_seats,

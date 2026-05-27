@@ -25,10 +25,10 @@ export default function Booking() {
   const isStudent = user.user_type === 'student';
   const studentVerified = Number(user.student_verified || 0) === 1;
 
-  const classMultipliers = {
-    'Economy Class': 1.0,
-    'Business Class': 2.5,
-    'First Class': 5.0
+  const priceMap = {
+    'Economy Class': 'price_economy',
+    'Business Class': 'price_business',
+    'First Class': 'price_first_class'
   };
 
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function Booking() {
     );
   }
 
-  const baseFare = flight.base_price * (classMultipliers[selectedClass] || 1.0);
+  const baseFare = flight[priceMap[selectedClass]] || flight.base_price || 0;
   const studentDiscount = isStudent && studentVerified ? baseFare * 0.20 : 0;
   const taxes = (baseFare - studentDiscount) * 0.15;
   const total = baseFare - studentDiscount + taxes;
@@ -197,9 +197,9 @@ export default function Booking() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[
-                      { name: 'First Class', icon: <Crown size={28}/>, multiplier: 5.0, seats: classSeatCounts["First Class"] ?? flight.first_class_seats_avail, color: 'amber', features: ['Private Suite', 'Premium Dining', 'Flat Bed'] },
-                      { name: 'Business Class', icon: <Star size={28}/>, multiplier: 2.5, seats: classSeatCounts["Business Class"] ?? flight.business_seats_avail, color: 'indigo', features: ['Wider Seats', 'Lounge Access', 'Extra Bag'] },
-                      { name: 'Economy Class', icon: <Armchair size={28}/>, multiplier: 1.0, seats: classSeatCounts["Economy Class"] ?? flight.economy_seats_avail, color: 'emerald', features: ['Modern Seats', 'Standard Meal', 'USB Power'] }
+                      { name: 'First Class', icon: <Crown size={28}/>, price: flight.price_first_class, seats: classSeatCounts["First Class"] ?? flight.first_class_seats_avail, color: 'amber', features: ['Private Suite', 'Premium Dining', 'Flat Bed'] },
+                      { name: 'Business Class', icon: <Star size={28}/>, price: flight.price_business, seats: classSeatCounts["Business Class"] ?? flight.business_seats_avail, color: 'indigo', features: ['Wider Seats', 'Lounge Access', 'Extra Bag'] },
+                      { name: 'Economy Class', icon: <Armchair size={28}/>, price: flight.price_economy, seats: classSeatCounts["Economy Class"] ?? flight.economy_seats_avail, color: 'emerald', features: ['Modern Seats', 'Standard Meal', 'USB Power'] }
                     ].map(c => (
                       <button
                         key={c.name}
@@ -214,7 +214,7 @@ export default function Booking() {
                           {c.icon}
                         </div>
                         <p className="font-black text-gray-900 text-xl mb-1">{c.name}</p>
-                        <p className="text-primary-600 font-black text-lg mb-6">${(flight.base_price * c.multiplier).toFixed(0)}</p>
+                        <p className="text-primary-600 font-black text-lg mb-6">${c.price || flight.base_price}</p>
                         
                         <div className="space-y-3 mb-8 flex-grow">
                            {c.features.map(f => (
